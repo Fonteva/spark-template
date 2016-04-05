@@ -87,7 +87,22 @@ public with sharing class SObjectService {
     public static void upsertRecords(SObject[] objects, SObjectType objectType) {
         Framework.Log.push(SobjectService.class.getName(),'upsertRecords - ' + objects.getSObjectType());
         if (Framework.SchemaService.checkObjectAccess(objectType, true, true, false)) {
-            upsert objects;
+            SObject[] insertObjects = new SObject[]{};
+            SObject[] updateObjects = new SObject[]{};
+            for (SObject obj : objects) {
+                if (obj.Id != null) {
+                    insertObjects.add(obj);
+                } else {
+                    updateObjects.add(obj);
+                }
+            }
+
+            if (!insertObjects.isEmpty()) {
+                insert insertObjects;
+            }
+            if (!updateObjects.isEmpty()) {
+                update updateObjects;
+            }
         } else {
             throw(new SObjectException(INSUFFICIENT_ACCESS));
         }
