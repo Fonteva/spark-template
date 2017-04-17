@@ -36,6 +36,10 @@ global with sharing class Contacts extends Framework.Domain {
         Framework.Log.push(Contacts.class.getName(),'applyDefaults');
 
         // Call Service class method to apply defaults
+        // context records are available as an SObject[]
+        // and the variable is `records`
+     
+        //e.g. ContactService.applyDefaults((Contact[]) records);
         
         Framework.Log.pop();
     }
@@ -45,7 +49,7 @@ global with sharing class Contacts extends Framework.Domain {
         
         // Call Service class method for before insert
         // context records are available as an SObject[]
-        // and the variable is called `records`
+        // and the variable is `records`
         
         Framework.Log.pop();
     }
@@ -55,7 +59,7 @@ global with sharing class Contacts extends Framework.Domain {
                 
         // Call Service class method for before update
         // context records are available as an SObject[]
-        // and the variable is called `records`
+        // and the variable is `records`
         
         Framework.Log.pop();
     }
@@ -65,7 +69,7 @@ global with sharing class Contacts extends Framework.Domain {
 
         // Call Service class method for after insert
         // context records are available as an SObject[]
-        // and the variable is called `records`
+        // and the variable is `records`
         
         Framework.Log.pop();
     }
@@ -75,7 +79,7 @@ global with sharing class Contacts extends Framework.Domain {
 
         // Call Service class method for after update
         // context records are available as an SObject[]
-        // and the variable is called `records`
+        // and the variable is `records`
         
         Framework.Log.pop();
     }
@@ -85,7 +89,7 @@ global with sharing class Contacts extends Framework.Domain {
 
         // Call Service class method for before delete
         // context records are available as an SObject[]
-        // and the variable is called `records`
+        // and the variable is `records`
 
         Framework.Log.pop();
     }
@@ -96,7 +100,7 @@ global with sharing class Contacts extends Framework.Domain {
 
         // Call Service class method for after delete
         // context records are available as an SObject[]
-        // and the variable is called `records`
+        // and the variable is `records`
 
         Framework.Log.pop();
     }
@@ -108,7 +112,7 @@ global with sharing class Contacts extends Framework.Domain {
         
         // Call Service class method for validation
         // context records are available as an SObject[]
-        // and the variable is called `records`
+        // and the variable is `records`
         
         Framework.Log.pop();
     }
@@ -120,7 +124,7 @@ global with sharing class Contacts extends Framework.Domain {
         
         // Call Service class method for validation
         // context records are available as an SObject[]
-        // and the variable is called `records`
+        // and the variable is `records`
         
         Framework.Log.pop();
     }
