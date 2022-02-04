@@ -49,7 +49,20 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    env:
+      DEVHUB_USERNAME: ${{ secrets.DEVHUB_USERNAME }}
+      DEVHUB_CLIENTID: ${{ secrets.DEVHUB_CLIENTID }}
+      DEVHUB_KEY: ${{ secrets.DEVHUB_KEY }}
+      SFDX_CLIENT_ID: ${{ secrets.SFDX_CLIENT_ID }}
+      SFDX_HUB_KEY: ${{ secrets.SFDX_HUB_KEY }}
+      CUMULUSCI_ORG_patch_org: '{"username": "${{ inputs.ORG_USERNAME }}", "instance_url": "${{ inputs.ORG_INSTANCE_URL }}"}'
+      REPO: ${{ inputs.REPO }}
+      ORG_USERNAME: ${{ inputs.ORG_USERNAME }}
+      ORG_NAMESPACE: ${{ inputs.ORG_NAMESPACE }}
+      ORG_PASSWORD: ${{ secrets.ORG_PASSWORD }}
+      VERSION_NAME: ${{ inputs.VERSION_NAME }}
+      VERSION_NUM_MAJOR: ${{ inputs.VERSION_NUM_MAJOR }}
+      VERSION_NUM_MINOR: ${{ inputs.VERSION_NUM_MINOR }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -87,17 +100,17 @@ jobs:
 
       - name: Authorize Devhub
         run: |
-          echo "${{ secrets.DEVHUB_KEY }}" | base64 -d > ./devhub.key
+          echo "$DEVHUB_KEY" | base64 -d > ./devhub.key
           echo "** Running 'sfdx auth:jwt:grant' ..."
-          sfdx auth:jwt:grant --clientid ${{ secrets.DEVHUB_CLIENTID }} --username ${{ secrets.DEVHUB_USERNAME }} --jwtkeyfile devhub.key --setdefaultdevhubusername --instanceurl $PROD_INST_URL
+          sfdx auth:jwt:grant --clientid $DEVHUB_CLIENTID --username $DEVHUB_USERNAME --jwtkeyfile devhub.key --setdefaultdevhubusername --instanceurl $PROD_INST_URL
           echo "** Running 'sfdx force:config:set' ..."
-          sfdx force:config:set defaultdevhubusername=${{ secrets.DEVHUB_USERNAME }}
+          sfdx force:config:set defaultdevhubusername=$DEVHUB_USERNAME
 
       - name: Upload
         run: |
-          echo "${{ secrets.SFDX_HUB_KEY }}" > ./framework.key
+          echo "$SFDX_HUB_KEY" > ./framework.key
           echo "** Running 'sfdx auth:jwt:grant' ..."
-          sfdx auth:jwt:grant --clientid ${{ secrets.SFDX_CLIENT_ID }} --username ${{ inputs.ORG_USERNAME }} --jwtkeyfile framework.key --instanceurl $PROD_INST_URL
+          sfdx auth:jwt:grant --clientid $SFDX_CLIENT_ID --username $ORG_USERNAME --jwtkeyfile framework.key --instanceurl $PROD_INST_URL
           GIT_COMMIT=$(git rev-parse HEAD)
           echo "** Commit = $GIT_COMMIT"
           # getting the jira tickets
@@ -110,11 +123,10 @@ jobs:
           else
             echo "jiraticket = $jiraticket"
           fi;
-          CUMULUSCI_ORG_patch_org='{"username": "${{ inputs.ORG_USERNAME }}", "instance_url": "${{ inputs.ORG_INSTANCE_URL }}"}'
           echo "** Running 'cci flow run deploy_to_packaging_org' ..."
           cci flow run deploy_to_packaging_org --org patch_org
           pushd ./ops-scripts/uploads-scripts
           node ./run-npm-deps-for-upload.js .
           echo "** Running 'node patch-upload.js' ..."
-          node ./patch-upload.js --username=${{ inputs.ORG_USERNAME }} --password=${{ secrets.ORG_PASSWORD }} --namespace=${{ inputs.ORG_NAMESPACE }} --versionname=${{ inputs.VERSION_NAME }} --tickets=$jiraticket --repo=${{ inputs.REPO }} --commit=$GIT_COMMIT --major=${{ inputs.VERSION_NUM_MAJOR }} --minor=${{ inputs.VERSION_NUM_MINOR }}
+          node ./patch-upload.js --username=$ORG_USERNAME --password=$ORG_PASSWORD --namespace=$ORG_NAMESPACE --versionname=$VERSION_NAME --tickets=$jiraticket --repo=$REPO --commit=$GIT_COMMIT --major=$VERSION_NUM_MAJOR --minor=$VERSION_NUM_MINOR
           popd
