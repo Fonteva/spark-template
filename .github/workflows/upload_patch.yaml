@@ -1,0 +1,108 @@
+name: Upload Patch
+
+env:
+  SFDX_USE_GENERIC_UNIX_KEYCHAIN: "true"
+  PROD_INST_URL: "https://login.salesforce.com"
+
+on:
+  workflow_call:
+    inputs:
+      REPO:
+        required: true
+        type: string
+      ORG_USERNAME:
+        required: true
+        type: string
+      ORG_NAMESPACE:
+        required: true
+        type: string
+      ORG_INSTANCE_URL:
+        required: true
+        type: string
+      VERSION_NAME:
+        required: true
+        type: string
+      VERSION_NUM_MAJOR:
+        required: true
+        type: string
+      VERSION_NUM_MINOR:
+        required: true
+        type: string
+    secrets:
+      BUILD_SSH_RSA_KEY:
+        required: true
+      DEVHUB_CLIENTID:
+        required: true
+      DEVHUB_KEY:
+        required: true
+      DEVHUB_USERNAME:
+        required: true
+      CUMULUSCI_SERVICE_github:
+        required: true
+      ORG_PASSWORD:
+        required: true
+      SFDX_CLIENT_ID:
+        required: true
+      SFDX_HUB_KEY:
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout ops-scripts
+        uses: actions/checkout@v2
+        with:
+          ssh-key: ${{ secrets.BUILD_SSH_RSA_KEY }}
+          repository: Fonteva/ops-scripts
+          path: ops-scripts
+
+      - name: Install Salesforce CLI
+        run: |
+          wget -qO- https://developer.salesforce.com/media/salesforce-cli/sfdx-linux-amd64.tar.xz | tar xJf -
+          ./sfdx-cli-*/install
+
+      - name: Set up Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: "3.8"
+
+      - name: Install CumulusCI
+        run: |
+          python -m pip install -U pip
+          pip install cumulusci
+
+      - name: Authorize Devhub
+        run: |
+          echo "${{ secrets.DEVHUB_KEY }}" | base64 -d > ./devhub.key
+          echo "** Running 'sfdx auth:jwt:grant' ..."
+          sfdx auth:jwt:grant --clientid ${{ secrets.DEVHUB_CLIENTID }} --username ${{ secrets.DEVHUB_USERNAME }} --jwtkeyfile devhub.key --setdefaultdevhubusername --instanceurl $PROD_INST_URL
+          echo "** Running 'sfdx force:config:set' ..."
+          sfdx force:config:set defaultdevhubusername=${{ secrets.DEVHUB_USERNAME }}
+
+      - name: Upload
+        run: |
+          echo "${{ secrets.SFDX_HUB_KEY }}" > ./framework.key
+          echo "** Running 'sfdx auth:jwt:grant' ..."
+          sfdx auth:jwt:grant --clientid ${{ secrets.SFDX_CLIENT_ID }} --username ${{ inputs.ORG_USERNAME }} --jwtkeyfile framework.key --instanceurl $PROD_INST_URL
+          GIT_COMMIT=$(git rev-parse HEAD)
+          echo "** Commit = $GIT_COMMIT"
+          # getting the jira tickets
+          git log --first-parent --oneline --since="24 hours ago" > test.txt
+          sed -i -e 's/[[:blank:]]/-/g' test.txt
+          jiraticket=`grep -P -o "(?i)PD-[0-9]{1,}" test.txt | tr '\n' ',' | tr [a-z] [A-Z]`
+          if [ -z "$jiraticket" ];then
+            echo "** No Jira ticket found"
+            jiraticket=`echo "NoTicket"`
+          else
+            echo "jiraticket = $jiraticket"
+          fi;
+          CUMULUSCI_ORG_patch_org='{"username": "${{ inputs.ORG_USERNAME }}", "instance_url": "${{ inputs.ORG_INSTANCE_URL }}"}'
+          echo "** Running 'cci flow run deploy_to_packaging_org' ..."
+          cci flow run deploy_to_packaging_org --org patch_org
+          pushd ./ops-scripts/uploads-scripts
+          node ./run-npm-deps-for-upload.js .
+          echo "** Running 'node patch-upload.js' ..."
+          node ./patch-upload.js --username=${{ inputs.ORG_USERNAME }} --password=${{ secrets.ORG_PASSWORD }} --namespace=${{ inputs.ORG_NAMESPACE }} --versionname=${{ inputs.VERSION_NAME }} --tickets=$jiraticket --repo=${{ inputs.REPO }} --commit=$GIT_COMMIT --major=${{ inputs.VERSION_NUM_MAJOR }} --minor=${{ inputs.VERSION_NUM_MINOR }}
+          popd
