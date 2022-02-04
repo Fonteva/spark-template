@@ -33,7 +33,7 @@ on:
         required: true
       DEVHUB_USERNAME:
         required: true
-      CUMULUSCI_SERVICE_github:
+      CUMULUSCI_SERVICE_GITHUB:
         required: true
 
 jobs:
@@ -43,6 +43,7 @@ jobs:
       DEVHUB_USERNAME: ${{ secrets.DEVHUB_USERNAME }}
       DEVHUB_CLIENTID: ${{ secrets.DEVHUB_CLIENTID }}
       DEVHUB_KEY: ${{ secrets.DEVHUB_KEY }}
+      CUMULUSCI_SERVICE_github: ${{ secrets.CUMULUSCI_SERVICE_GITHUB }}
       SCRATCH_ORG_JSON: ${{ inputs.SCRATCH_ORG_JSON }}
       CCI_FLOW_NAME: ${{ inputs.CCI_FLOW_NAME }}
       SCRATCH_ORG_USERNAME: ${{ inputs.SCRATCH_ORG_USERNAME }}
