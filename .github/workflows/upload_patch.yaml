@@ -45,6 +45,8 @@ on:
         required: true
       SFDX_HUB_KEY:
         required: true
+      MARKETPLACE_TOKEN:
+        required: true
 
 jobs:
   build:
@@ -55,6 +57,7 @@ jobs:
       DEVHUB_KEY: ${{ secrets.DEVHUB_KEY }}
       SFDX_CLIENT_ID: ${{ secrets.SFDX_CLIENT_ID }}
       SFDX_HUB_KEY: ${{ secrets.SFDX_HUB_KEY }}
+      MARKETPLACE_TOKEN: ${{ secrets.MARKETPLACE_TOKEN }}
       CUMULUSCI_ORG_patch_org: '{"username": "${{ inputs.ORG_USERNAME }}", "instance_url": "${{ inputs.ORG_INSTANCE_URL }}"}'
       REPO: ${{ inputs.REPO }}
       ORG_USERNAME: ${{ inputs.ORG_USERNAME }}
@@ -119,7 +122,7 @@ jobs:
           jiraticket=`grep -P -o "(?i)PD-[0-9]{1,}" test.txt | tr '\n' ',' | tr [a-z] [A-Z]`
           if [ -z "$jiraticket" ];then
             echo "** No Jira ticket found"
-            jiraticket=`echo "NoTicket"`
+            jiraticket="NoTickets"
           else
             echo "jiraticket = $jiraticket"
           fi;
@@ -128,5 +131,5 @@ jobs:
           pushd ./ops-scripts/uploads-scripts
           node ./run-npm-deps-for-upload.js .
           echo "** Running 'node patch-upload.js' ..."
-          node ./patch-upload.js --username=$ORG_USERNAME --password=$ORG_PASSWORD --namespace=$ORG_NAMESPACE --versionname=$VERSION_NAME --tickets=$jiraticket --repo=$REPO --commit=$GIT_COMMIT --major=$VERSION_NUM_MAJOR --minor=$VERSION_NUM_MINOR
+          node ./patch-upload-gha.js --username=$ORG_USERNAME --password=$ORG_PASSWORD --namespace=$ORG_NAMESPACE --versionname=$VERSION_NAME --tickets=$jiraticket --repo=$REPO --commit=$GIT_COMMIT --major=$VERSION_NUM_MAJOR --minor=$VERSION_NUM_MINOR --marketplacetoken=$MARKETPLACE_TOKEN
           popd
