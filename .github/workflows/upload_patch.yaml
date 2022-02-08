@@ -7,6 +7,9 @@ env:
 on:
   workflow_call:
     inputs:
+      CCI_FLOW_NAME:
+        required: true
+        type: string
       REPO:
         required: true
         type: string
@@ -132,10 +135,10 @@ jobs:
           else
             echo "jiraticket = $jiraticket"
           fi;
-          echo "** Running 'cci flow run deploy_to_packaging_org' ..."
-          cci flow run deploy_to_packaging_org --org patch_org
-          pushd ./ops-scripts/uploads-scripts
-          node ./run-npm-deps-for-upload.js .
-          echo "** Running 'node patch-upload.js' ..."
-          node ./patch-upload-gha.js --username=$ORG_USERNAME --password=$ORG_PASSWORD --namespace=$ORG_NAMESPACE --versionname=$VERSION_NAME --tickets=$jiraticket --repo=$REPO --commit=$GIT_COMMIT --major=$VERSION_NUM_MAJOR --minor=$VERSION_NUM_MINOR --marketplacetoken=$MARKETPLACE_TOKEN
+          echo "** Running 'cci flow run $CCI_FLOW_NAME' ..."
+          cci flow run $CCI_FLOW_NAME --org patch_org
+          pushd ./ops-scripts/uploads-scripts/github
+          npm install
+          echo "** Running 'node upload.js' ..."
+          node ./upload.js --username=$ORG_USERNAME --password=$ORG_PASSWORD --namespace=$ORG_NAMESPACE --versionname=$VERSION_NAME --tickets=$jiraticket --repo=$REPO --commit=$GIT_COMMIT --major=$VERSION_NUM_MAJOR --minor=$VERSION_NUM_MINOR
           popd
