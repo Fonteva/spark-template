@@ -39,13 +39,9 @@ on:
         required: true
       CUMULUSCI_SERVICE_github:
         required: true
-      ORG_PASSWORD:
-        required: true
       SFDX_CLIENT_ID:
         required: true
       SFDX_HUB_KEY:
-        required: true
-      MARKETPLACE_TOKEN:
         required: true
       AWS_ACCESS_KEY_ID:
         required: true
