@@ -61,6 +61,7 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       CUMULUSCI_ORG_package_org: '{"username": "${{ inputs.ORG_USERNAME }}", "instance_url": "${{ inputs.ORG_INSTANCE_URL }}"}'
+      CCI_FLOW_NAME: ${{ inputs.CCI_FLOW_NAME }}
       REPO: ${{ inputs.REPO }}
       ORG_USERNAME: ${{ inputs.ORG_USERNAME }}
       ORG_NAMESPACE: ${{ inputs.ORG_NAMESPACE }}
