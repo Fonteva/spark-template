@@ -47,6 +47,10 @@ on:
         required: true
       MARKETPLACE_TOKEN:
         required: true
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
 
 jobs:
   build:
@@ -58,6 +62,8 @@ jobs:
       SFDX_CLIENT_ID: ${{ secrets.SFDX_CLIENT_ID }}
       SFDX_HUB_KEY: ${{ secrets.SFDX_HUB_KEY }}
       MARKETPLACE_TOKEN: ${{ secrets.MARKETPLACE_TOKEN }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       CUMULUSCI_ORG_patch_org: '{"username": "${{ inputs.ORG_USERNAME }}", "instance_url": "${{ inputs.ORG_INSTANCE_URL }}"}'
       REPO: ${{ inputs.REPO }}
       ORG_USERNAME: ${{ inputs.ORG_USERNAME }}
