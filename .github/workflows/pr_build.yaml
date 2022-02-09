@@ -38,7 +38,8 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # runs-on: ubuntu-latest
+    runs-on: self-hosted
     env:
       DEVHUB_USERNAME: ${{ secrets.DEVHUB_USERNAME }}
       DEVHUB_CLIENTID: ${{ secrets.DEVHUB_CLIENTID }}
@@ -62,16 +63,19 @@ jobs:
           git pull
 
       - name: Install Salesforce CLI
+        if: ${{ !startsWith(runner.name, 'ip-10-0-10-') }}
         run: |
           wget -qO- https://developer.salesforce.com/media/salesforce-cli/sfdx-linux-amd64.tar.xz | tar xJf -
           ./sfdx-cli-*/install
 
       - name: Set up Python
+        if: ${{ !startsWith(runner.name, 'ip-10-0-10-') }}
         uses: actions/setup-python@v1
         with:
           python-version: "3.8"
 
       - name: Install CumulusCI
+        if: ${{ !startsWith(runner.name, 'ip-10-0-10-') }}
         run: |
           python -m pip install -U pip
           pip install cumulusci
