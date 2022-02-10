@@ -110,6 +110,7 @@ jobs:
             sfdx force:config:set defaultdevhubusername=$DEVHUB_USERNAME
             echo "** Running 'sfdx force:user:password:generate' ..."
             sfdx force:user:password:generate -u $SCRATCH_ORG_USERNAME
+            sfdx force:user:display -u $SCRATCH_ORG_USERNAME
           fi
           echo "** Running 'sfdx auth:jwt:grant' ..."
           sfdx auth:jwt:grant --clientid $DEVHUB_CLIENTID --username $SCRATCH_ORG_USERNAME --jwtkeyfile devhub.key --instanceurl $TEST_INST_URL
