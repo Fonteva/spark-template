@@ -38,8 +38,7 @@ on:
 
 jobs:
   build:
-    # runs-on: ubuntu-latest
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     env:
       DEVHUB_USERNAME: ${{ secrets.DEVHUB_USERNAME }}
       DEVHUB_CLIENTID: ${{ secrets.DEVHUB_CLIENTID }}
@@ -49,7 +48,6 @@ jobs:
       CCI_FLOW_NAME: ${{ inputs.CCI_FLOW_NAME }}
       SCRATCH_ORG_USERNAME: ${{ inputs.SCRATCH_ORG_USERNAME }}
       SCRATCH_ORG_ALIAS: ${{ inputs.SCRATCH_ORG_ALIAS }}
-      SFDX_CLIENT_ID: ${{ secrets.DEVHUB_CLIENTID }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -64,19 +62,16 @@ jobs:
           git pull
 
       - name: Install Salesforce CLI
-        if: ${{ !startsWith(runner.name, 'ip-10-0-10-') }}
         run: |
           wget -qO- https://developer.salesforce.com/media/salesforce-cli/sfdx-linux-amd64.tar.xz | tar xJf -
           ./sfdx-cli-*/install
 
       - name: Set up Python
-        if: ${{ !startsWith(runner.name, 'ip-10-0-10-') }}
         uses: actions/setup-python@v1
         with:
           python-version: "3.8"
 
       - name: Install CumulusCI
-        if: ${{ !startsWith(runner.name, 'ip-10-0-10-') }}
         run: |
           python -m pip install -U pip
           pip install cumulusci
@@ -102,6 +97,8 @@ jobs:
           COUNT=`echo "$ACTIVE_SCRATCH" | jq -r '.result.totalSize'`
           if [ $COUNT -gt 0 ];then
             echo "** Using existing scratch org"
+            echo "** Running 'sfdx auth:jwt:grant' ..."
+            sfdx auth:jwt:grant --clientid $DEVHUB_CLIENTID --username $SCRATCH_ORG_USERNAME --jwtkeyfile devhub.key --instanceurl $TEST_INST_URL
           else
             echo "** Creating new scratch org"
             echo "** Running 'sfdx force:org:create' ..."
@@ -110,23 +107,20 @@ jobs:
             sfdx force:config:set defaultdevhubusername=$DEVHUB_USERNAME
             echo "** Running 'sfdx force:user:password:generate' ..."
             sfdx force:user:password:generate -u $SCRATCH_ORG_USERNAME
-            sfdx force:user:display -u $SCRATCH_ORG_USERNAME
           fi
-          echo "** Running 'sfdx auth:jwt:grant' ..."
-          sfdx auth:jwt:grant --clientid $DEVHUB_CLIENTID --username $SCRATCH_ORG_USERNAME --jwtkeyfile devhub.key --instanceurl $TEST_INST_URL
-          cciOrgVar="CUMULUSCI_ORG_$SCRATCH_ORG_ALIAS"
-          printf -v $cciOrgVar '{"username": "'$SCRATCH_ORG_USERNAME'", "instance_url": "'$TEST_INST_URL'"}'
-          export $(sh -c "echo \$$cciOrgVar")
-          export SFDX_HUB_KEY=$(echo "$DEVHUB_KEY" | base64 -d)
+          echo "** Running 'sfdx force:user:display' ..."
+          sfdx force:user:display -u $SCRATCH_ORG_USERNAME
+          echo "** Running 'cci org import' ..."
+          cci org import $SCRATCH_ORG_USERNAME $SCRATCH_ORG_ALIAS
           echo "** Running 'cci flow run $CCI_FLOW_NAME' ..."
           cci flow run $CCI_FLOW_NAME --org $SCRATCH_ORG_ALIAS
         
       - name: Delete Scratch Org
         if: ${{ github.event.action == 'closed' }}
         run: |
-          echo "** Running 'sfdx auth:jwt:grant' ..."
           sfdx auth:jwt:grant --clientid $DEVHUB_CLIENTID --username $SCRATCH_ORG_USERNAME --jwtkeyfile devhub.key --instanceurl $TEST_INST_URL
-          echo "** Deleting scratch org $SCRATCH_ORG_USERNAME"
-          sfdx force:data:record:delete --sobjecttype ActiveScratchOrg --targetusername $DEVHUB_USERNAME --where "SignupUsername='$SCRATCH_ORG_USERNAME'"
-          rm -f "~/.sfdx/$SCRATCH_ORG_USERNAME.json"
-          rm -f "~/.cumulusci/$SCRATCH_ORG_ALIAS.org"
+          STATUS=$?
+          if [ $STATUS -eq 0 ];then
+            echo "** Deleting scratch org $SCRATCH_ORG_USERNAME"
+            echo 'y' | sfdx force:org:delete -u $SCRATCH_ORG_USERNAME
+          fi
