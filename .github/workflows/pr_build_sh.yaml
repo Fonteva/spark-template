@@ -73,10 +73,15 @@ jobs:
       - name: Authorize Devhub
         run: |
           echo "$DEVHUB_KEY" | base64 -d > ./devhub.key
-          echo "** Running 'sfdx auth:jwt:grant' ..."
-          sfdx auth:jwt:grant --clientid $DEVHUB_CLIENTID --username $DEVHUB_USERNAME --jwtkeyfile devhub.key --setdefaultdevhubusername --instanceurl $PROD_INST_URL
-          echo "** Running 'sfdx force:config:set' ..."
-          sfdx force:config:set defaultdevhubusername=$DEVHUB_USERNAME
+          if [ ! -e ~/.sfdx/product@fonteva.com.json ]; then
+            echo "** Running 'sfdx auth:jwt:grant' ..."
+            sfdx auth:jwt:grant --clientid $DEVHUB_CLIENTID --username $DEVHUB_USERNAME --jwtkeyfile devhub.key --setdefaultdevhubusername --instanceurl $PROD_INST_URL
+          fi
+          v=$(sfdx config:get defaultdevhubusername --json | jq -r '.result[0].value')
+          if [ "$v" = "null" ]; then
+            echo "** Running 'sfdx force:config:set' ..."
+            sfdx force:config:set defaultdevhubusername=$DEVHUB_USERNAME
+          fi
 
       - name: Build
         if: ${{ github.event.action != 'closed' }}
