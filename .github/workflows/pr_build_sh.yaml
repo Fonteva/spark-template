@@ -115,7 +115,9 @@ jobs:
           echo "** Running 'sfdx auth:jwt:grant' ..."
           sfdx auth:jwt:grant --clientid $DEVHUB_CLIENTID --username $SCRATCH_ORG_USERNAME --jwtkeyfile devhub.key --instanceurl $TEST_INST_URL
           cciOrgVar="CUMULUSCI_ORG_$SCRATCH_ORG_ALIAS"
+          echo $cciOrgVar
           printf -v $cciOrgVar '{"username": "'$SCRATCH_ORG_USERNAME'", "instance_url": "'$TEST_INST_URL'"}'
+          echo $(sh -c "echo \$$cciOrgVar")
           export $(sh -c "echo \$$cciOrgVar")
           export SFDX_HUB_KEY=$(echo "$DEVHUB_KEY" | base64 -d)
           echo "** Running 'cci flow run $CCI_FLOW_NAME' ..."
