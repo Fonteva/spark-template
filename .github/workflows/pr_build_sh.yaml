@@ -52,7 +52,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-        if: ${{ github.event.action != 'closed' }}
+        #if: ${{ github.event.action != 'closed' }}
         with:
           ssh-key: ${{ secrets.BUILD_SSH_RSA_KEY }}
           submodules: true
