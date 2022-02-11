@@ -118,7 +118,8 @@ jobs:
           echo $cciOrgVar
           printf -v $cciOrgVar '{"username": "'$SCRATCH_ORG_USERNAME'", "instance_url": "'$TEST_INST_URL'"}'
           echo $(sh -c "echo \$$cciOrgVar")
-          export $(sh -c "echo \$$cciOrgVar")
+          export $cciOrgVar
+          echo ${!cciOrgVar}
           export SFDX_HUB_KEY=$(echo "$DEVHUB_KEY" | base64 -d)
           echo "** Running 'cci flow run $CCI_FLOW_NAME' ..."
           cci flow run $CCI_FLOW_NAME --org $SCRATCH_ORG_ALIAS
