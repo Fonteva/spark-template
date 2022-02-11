@@ -53,36 +53,35 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+        if: ${{ github.event.action != 'closed' }}
         with:
           ssh-key: ${{ secrets.BUILD_SSH_RSA_KEY }}
           submodules: true
 
       - name: Update Build Submodule
+        if: ${{ github.event.action != 'closed' }}
         run: |
           cd build
           git checkout master
           git pull
 
-      - name: Install Salesforce CLI
-        if: ${{ !startsWith(runner.name, 'ip-10-0-10-') }}
-        run: |
-          wget -qO- https://developer.salesforce.com/media/salesforce-cli/sfdx-linux-amd64.tar.xz | tar xJf -
-          ./sfdx-cli-*/install
-
-      - name: Set up Python
-        if: ${{ !startsWith(runner.name, 'ip-10-0-10-') }}
-        uses: actions/setup-python@v1
-        with:
-          python-version: "3.8"
-
-      - name: Install CumulusCI
-        if: ${{ !startsWith(runner.name, 'ip-10-0-10-') }}
-        run: |
-          python -m pip install -U pip
-          pip install cumulusci
+      #- name: Install Salesforce CLI
+      #  run: |
+      #    wget -qO- https://developer.salesforce.com/media/salesforce-cli/sfdx-linux-amd64.tar.xz | tar xJf -
+      #    ./sfdx-cli-*/install
+      #
+      #- name: Set up Python
+      #  uses: actions/setup-python@v1
+      #  with:
+      #    python-version: "3.8"
+      #
+      #- name: Install CumulusCI
+      #  run: |
+      #    python -m pip install -U pip
+      #    pip install cumulusci
 
       - name: NPM Install
-        if: ${{ inputs.RUN_NPM_INSTALL }}
+        if: ${{ github.event.action != 'closed' && inputs.RUN_NPM_INSTALL }}
         run: |
           npm install
           npm install @salesforce/sfdx-lwc-jest --save-dev
@@ -124,13 +123,23 @@ jobs:
           fi
           echo "** Running 'cci flow run $CCI_FLOW_NAME' ..."
           cci flow run $CCI_FLOW_NAME --org $SCRATCH_ORG_ALIAS
-        
+
       - name: Delete Scratch Org
         if: ${{ github.event.action == 'closed' }}
         run: |
-          echo "** Running 'sfdx auth:jwt:grant' ..."
-          sfdx auth:jwt:grant --clientid $DEVHUB_CLIENTID --username $SCRATCH_ORG_USERNAME --jwtkeyfile devhub.key --instanceurl $TEST_INST_URL
+          #echo "** Running 'sfdx auth:jwt:grant' ..."
+          #sfdx auth:jwt:grant --clientid $DEVHUB_CLIENTID --username $SCRATCH_ORG_USERNAME --jwtkeyfile devhub.key --instanceurl $TEST_INST_URL
           echo "** Deleting scratch org $SCRATCH_ORG_USERNAME"
           sfdx force:data:record:delete --sobjecttype ActiveScratchOrg --targetusername $DEVHUB_USERNAME --where "SignupUsername='$SCRATCH_ORG_USERNAME'"
           rm -f ~/.sfdx/$SCRATCH_ORG_USERNAME.json
           rm -f ~/.cumulusci/*/$SCRATCH_ORG_ALIAS.org
+
+  clean:
+    if: ${{ always() }}
+    needs: [ build ]
+    runs-on: self-hosted
+    steps:
+      - name: Remove workspace folder
+        run: |
+          rm -rf * $GITHUB_WORKSPACE
+
