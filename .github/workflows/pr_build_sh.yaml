@@ -116,8 +116,6 @@ jobs:
       - name: Delete Scratch Org
         if: ${{ github.event.action == 'closed' }}
         run: |
-          echo "** Running 'sfdx auth:jwt:grant' ..."
-          sfdx auth:jwt:grant --clientid $DEVHUB_CLIENTID --username $SCRATCH_ORG_USERNAME --jwtkeyfile devhub.key --instanceurl $TEST_INST_URL
           echo "** Deleting scratch org $SCRATCH_ORG_USERNAME"
           sfdx force:data:record:delete --sobjecttype ActiveScratchOrg --targetusername $DEVHUB_USERNAME --where "SignupUsername='$SCRATCH_ORG_USERNAME'"
           rm -f ~/.sfdx/$SCRATCH_ORG_USERNAME.json
