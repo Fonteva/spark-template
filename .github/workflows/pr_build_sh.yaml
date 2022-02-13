@@ -38,7 +38,7 @@ on:
 
 jobs:
   build:
-    runs-on: self-hosted
+    runs-on: [self-hosted, prod]
     env:
       DEVHUB_USERNAME: ${{ secrets.DEVHUB_USERNAME }}
       DEVHUB_CLIENTID: ${{ secrets.DEVHUB_CLIENTID }}
