@@ -124,7 +124,7 @@ jobs:
   clean:
     if: ${{ always() }}
     needs: [ build ]
-    runs-on: self-hosted
+    runs-on: [self-hosted, prod]
     steps:
       - name: Remove workspace folder
         run: |
