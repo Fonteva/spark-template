@@ -22,6 +22,9 @@ on:
       ORG_NAMESPACE:
         required: true
         type: string
+      ORG_ALIAS:
+        required: true
+        type: string
       VERSION_NAME:
         required: true
         type: string
@@ -58,14 +61,13 @@ jobs:
       MARKETPLACE_TOKEN: ${{ secrets.MARKETPLACE_TOKEN }}
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      #CUMULUSCI_ORG_package_org: '{"username": "${{ inputs.ORG_USERNAME }}", "instance_url": "${{ inputs.PROD_INST_URL }}"}'
       CCI_FLOW_NAME: ${{ inputs.CCI_FLOW_NAME }}
       PACKAGE_NAME: ${{ inputs.PACKAGE_NAME }}
       REPO: ${{ inputs.REPO }}
       ORG_USERNAME: ${{ inputs.ORG_USERNAME }}
       ORG_NAMESPACE: ${{ inputs.ORG_NAMESPACE }}
       ORG_PASSWORD: ${{ secrets.ORG_PASSWORD }}
-      CCI_ORG_ALIAS: '${{ inputs.PACKAGE_NAME }}_pkg'
+      ORG_ALIAS: ${{ inputs.ORG_ALIAS }}
       VERSION_NAME: ${{ inputs.VERSION_NAME }}
       FRAMEWORK_KEY_FILE: /home/ec2-user/framework.key
     steps:
@@ -107,13 +109,13 @@ jobs:
           else
             echo "jiraticket = $jiraticket"
           fi;
-          cciOrgVar="CUMULUSCI_ORG_$CCI_ORG_ALIAS"
+          cciOrgVar="CUMULUSCI_ORG_$ORG_ALIAS"
           echo $cciOrgVar
           printf -v $cciOrgVar '{"username": "'$ORG_USERNAME'", "instance_url": "'$PROD_INST_URL'"}'
           export $cciOrgVar
           echo ${!cciOrgVar}
           echo "** Running 'cci flow run $CCI_FLOW_NAME' ..."
-          cci flow run $CCI_FLOW_NAME --org $CCI_ORG_ALIAS
+          cci flow run $CCI_FLOW_NAME --org $ORG_ALIAS
           echo "** Running 'node upload.js' ..."
           pushd ./ops-scripts/uploads-scripts/github
           npm install
