@@ -22,9 +22,12 @@ on:
       ORG_NAMESPACE:
         required: true
         type: string
-      ORG_INSTANCE_URL:
+      CCI_ORG_ALIAS:
         required: true
         type: string
+      #ORG_INSTANCE_URL:
+      #  required: true
+      #  type: string
       VERSION_NAME:
         required: true
         type: string
@@ -61,14 +64,16 @@ jobs:
       MARKETPLACE_TOKEN: ${{ secrets.MARKETPLACE_TOKEN }}
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      CUMULUSCI_ORG_package_org: '{"username": "${{ inputs.ORG_USERNAME }}", "instance_url": "${{ inputs.ORG_INSTANCE_URL }}"}'
+      #CUMULUSCI_ORG_package_org: '{"username": "${{ inputs.ORG_USERNAME }}", "instance_url": "${{ inputs.PROD_INST_URL }}"}'
       CCI_FLOW_NAME: ${{ inputs.CCI_FLOW_NAME }}
       PACKAGE_NAME: ${{ inputs.PACKAGE_NAME }}
       REPO: ${{ inputs.REPO }}
       ORG_USERNAME: ${{ inputs.ORG_USERNAME }}
       ORG_NAMESPACE: ${{ inputs.ORG_NAMESPACE }}
       ORG_PASSWORD: ${{ secrets.ORG_PASSWORD }}
+      CCI_ORG_ALIAS: ${{ inputs.CCI_ORG_ALIAS }}
       VERSION_NAME: ${{ inputs.VERSION_NAME }}
+      FRAMEWORK_KEY_FILE: /home/ec2-user/framework.key
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -89,24 +94,26 @@ jobs:
           repository: Fonteva/ops-scripts
           path: ops-scripts
 
-      - name: Authorize Devhub
-        run: |
-          if [ ! -e $DEVHUB_KEY_FILE ]; then
-            echo "$DEVHUB_KEY" | base64 -d > $DEVHUB_KEY_FILE
-            echo "** Running 'sfdx auth:jwt:grant' ..."
-            sfdx auth:jwt:grant --clientid $DEVHUB_CLIENTID --username $DEVHUB_USERNAME --jwtkeyfile $DEVHUB_KEY_FILE --setdefaultdevhubusername --instanceurl $PROD_INST_URL
-          fi
-          v=$(sfdx config:get defaultdevhubusername --json | jq -r '.result[0].value')
-          if [ "$v" = "null" ]; then
-            echo "** Running 'sfdx force:config:set' ..."
-            sfdx force:config:set defaultdevhubusername=$DEVHUB_USERNAME
-          fi
+      #- name: Authorize Devhub
+      #  run: |
+      #    if [ ! -e $DEVHUB_KEY_FILE ]; then
+      #      echo "$DEVHUB_KEY" | base64 -d > $DEVHUB_KEY_FILE
+      #      echo "** Running 'sfdx auth:jwt:grant' ..."
+      #      sfdx auth:jwt:grant --clientid $DEVHUB_CLIENTID --username $DEVHUB_USERNAME --jwtkeyfile $DEVHUB_KEY_FILE --setdefaultdevhubusername --instanceurl $PROD_INST_URL
+      #    fi
+      #    v=$(sfdx config:get defaultdevhubusername --json | jq -r '.result[0].value')
+      #    if [ "$v" = "null" ]; then
+      #      echo "** Running 'sfdx force:config:set' ..."
+      #      sfdx force:config:set defaultdevhubusername=$DEVHUB_USERNAME
+      #    fi
 
       - name: Upload
         run: |
-          echo "$SFDX_HUB_KEY" > ./framework.key
-          echo "** Running 'sfdx auth:jwt:grant' ..."
-          sfdx auth:jwt:grant --clientid $SFDX_CLIENT_ID --username $ORG_USERNAME --jwtkeyfile framework.key --instanceurl $PROD_INST_URL
+          if [ ! -e $FRAMEWORK_KEY_FILE ]; then
+            echo "$SFDX_HUB_KEY" > $FRAMEWORK_KEY_FILE
+            echo "** Running 'sfdx auth:jwt:grant' ..."
+            sfdx auth:jwt:grant --clientid $SFDX_CLIENT_ID --username $ORG_USERNAME --jwtkeyfile $FRAMEWORK_KEY_FILE --instanceurl $PROD_INST_URL
+          fi
           GIT_COMMIT=$(git rev-parse HEAD)
           echo "** Commit = $GIT_COMMIT"
           # getting the jira tickets
@@ -119,11 +126,16 @@ jobs:
           else
             echo "jiraticket = $jiraticket"
           fi;
+          cciOrgVar="CUMULUSCI_ORG_$CCI_ORG_ALIAS"
+          echo $cciOrgVar
+          printf -v $cciOrgVar '{"username": "'$ORG_USERNAME'", "instance_url": "'$PROD_INST_URL'"}'
+          export $cciOrgVar
+          echo ${!cciOrgVar}
           echo "** Running 'cci flow run $CCI_FLOW_NAME' ..."
-          cci flow run $CCI_FLOW_NAME --org package_org
+          cci flow run $CCI_FLOW_NAME --org $CCI_ORG_ALIAS
+          echo "** Running 'node upload.js' ..."
           pushd ./ops-scripts/uploads-scripts/github
           npm install
-          echo "** Running 'node upload.js' ..."
           node ./upload.js --namespace=$ORG_NAMESPACE --versionname=$VERSION_NAME --tickets=$jiraticket --repo=$REPO --commit=$GIT_COMMIT --package=$PACKAGE_NAME
           popd
 
