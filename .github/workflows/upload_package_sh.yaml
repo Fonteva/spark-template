@@ -22,9 +22,6 @@ on:
       ORG_NAMESPACE:
         required: true
         type: string
-      #ORG_INSTANCE_URL:
-      #  required: true
-      #  type: string
       VERSION_NAME:
         required: true
         type: string
@@ -90,19 +87,6 @@ jobs:
           ssh-key: ${{ secrets.BUILD_SSH_RSA_KEY }}
           repository: Fonteva/ops-scripts
           path: ops-scripts
-
-      #- name: Authorize Devhub
-      #  run: |
-      #    if [ ! -e $DEVHUB_KEY_FILE ]; then
-      #      echo "$DEVHUB_KEY" | base64 -d > $DEVHUB_KEY_FILE
-      #      echo "** Running 'sfdx auth:jwt:grant' ..."
-      #      sfdx auth:jwt:grant --clientid $DEVHUB_CLIENTID --username $DEVHUB_USERNAME --jwtkeyfile $DEVHUB_KEY_FILE --setdefaultdevhubusername --instanceurl $PROD_INST_URL
-      #    fi
-      #    v=$(sfdx config:get defaultdevhubusername --json | jq -r '.result[0].value')
-      #    if [ "$v" = "null" ]; then
-      #      echo "** Running 'sfdx force:config:set' ..."
-      #      sfdx force:config:set defaultdevhubusername=$DEVHUB_USERNAME
-      #    fi
 
       - name: Upload
         run: |
