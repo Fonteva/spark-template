@@ -22,9 +22,6 @@ on:
       ORG_NAMESPACE:
         required: true
         type: string
-      CCI_ORG_ALIAS:
-        required: true
-        type: string
       #ORG_INSTANCE_URL:
       #  required: true
       #  type: string
@@ -71,7 +68,7 @@ jobs:
       ORG_USERNAME: ${{ inputs.ORG_USERNAME }}
       ORG_NAMESPACE: ${{ inputs.ORG_NAMESPACE }}
       ORG_PASSWORD: ${{ secrets.ORG_PASSWORD }}
-      CCI_ORG_ALIAS: ${{ inputs.CCI_ORG_ALIAS }}
+      CCI_ORG_ALIAS: '${{ inputs.PACKAGE_NAME }}_pkg'
       VERSION_NAME: ${{ inputs.VERSION_NAME }}
       FRAMEWORK_KEY_FILE: /home/ec2-user/framework.key
     steps:
