@@ -55,6 +55,7 @@ jobs:
       DEVHUB_USERNAME: ${{ secrets.DEVHUB_USERNAME }}
       DEVHUB_CLIENTID: ${{ secrets.DEVHUB_CLIENTID }}
       DEVHUB_KEY: ${{ secrets.DEVHUB_KEY }}
+      CUMULUSCI_SERVICE_github: ${{ secrets.CUMULUSCI_SERVICE_GITHUB }}
       SFDX_CLIENT_ID: ${{ secrets.SFDX_CLIENT_ID }}
       SFDX_HUB_KEY: ${{ secrets.SFDX_HUB_KEY }}
       MARKETPLACE_TOKEN: ${{ secrets.MARKETPLACE_TOKEN }}
