@@ -125,7 +125,7 @@ jobs:
           export $cciOrgVar
           echo ${!cciOrgVar}
           echo "** Running 'cci flow run $CCI_FLOW_NAME' ..."
-          #cci flow run $CCI_FLOW_NAME --org $ORG_ALIAS
+          cci flow run $CCI_FLOW_NAME --org $ORG_ALIAS
           echo "** Running 'node upload.js' ..."
           pushd ./ops-scripts/uploads-scripts/github
           npm install
@@ -135,7 +135,7 @@ jobs:
             uploadArgs=""
           fi
           echo "uploadArgs = $uploadArgs"
-          #node ./upload.js --namespace=$ORG_NAMESPACE --versionname=$VERSION_NAME --tickets=$jiraticket --repo=$REPO --commit=$GIT_COMMIT --package=$PACKAGE_NAME $uploadArgs
+          node ./upload.js --namespace=$ORG_NAMESPACE --versionname=$VERSION_NAME --tickets=$jiraticket --repo=$REPO --commit=$GIT_COMMIT --package=$PACKAGE_NAME $uploadArgs
           popd
 
   clean:
