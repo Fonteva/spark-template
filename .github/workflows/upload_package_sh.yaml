@@ -32,6 +32,10 @@ on:
         required: false
         type: boolean
         default: false
+      NO_BUILD_SUBMODULE:
+        required: false
+        type: boolean
+        default: false
     secrets:
       BUILD_SSH_RSA_KEY:
         required: true
@@ -83,6 +87,7 @@ jobs:
           submodules: true
 
       - name: Update Build Submodule
+        if: ${{ !inputs.NO_BUILD_SUBMODULE }}
         run: |
           cd build
           git checkout master
