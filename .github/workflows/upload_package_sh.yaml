@@ -7,8 +7,11 @@ env:
 on:
   workflow_call:
     inputs:
-      PACKAGE_NAME:
+      SECRET_ID:
         required: true
+      USERNAME_SECRET:
+        type: string
+      PASSWORD_SECRET:
         type: string
       REPO:
         required: true
@@ -76,7 +79,9 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       CCI_FLOW_NAME: ${{ inputs.CCI_FLOW_NAME }}
-      PACKAGE_NAME: ${{ inputs.PACKAGE_NAME }}
+      SECRET_ID: ${{ inputs.SECRET_ID }}
+      USERNAME_SECRET: ${{ inputs.USERNAME_SECRET }}
+      PASSWORD_SECRET: ${{ inputs.PASSWORD_SECRET }}
       REPO: ${{ inputs.REPO }}
       ORG_USERNAME: ${{ inputs.ORG_USERNAME }}
       ORG_NAMESPACE: ${{ inputs.ORG_NAMESPACE }}
@@ -117,6 +122,7 @@ jobs:
           fi
           GIT_COMMIT=$(git rev-parse HEAD)
           echo "** Commit = $GIT_COMMIT"
+          
           # getting the jira tickets
           git log --first-parent --oneline --since="24 hours ago" > test.txt
           sed -i -e 's/[[:blank:]]/-/g' test.txt
@@ -127,6 +133,7 @@ jobs:
           else
             echo "jiraticket = $jiraticket"
           fi;
+          
           cciOrgVar="CUMULUSCI_ORG_$ORG_ALIAS"
           echo $cciOrgVar
           printf -v $cciOrgVar '{"username": "'$ORG_USERNAME'", "instance_url": "'$PROD_INST_URL'"}'
@@ -134,22 +141,41 @@ jobs:
           echo ${!cciOrgVar}
           echo "** Running 'cci flow run $CCI_FLOW_NAME' ..."
           cci flow run $CCI_FLOW_NAME --org $ORG_ALIAS
-          echo "** Running 'node upload.js' ..."
+          
+          echo "** Running 'npm install' ..."
           pushd ./ops-scripts/uploads-scripts/github
           npm install
+          
+          uploadArgs=""
+          
           if [ "$NO_FONDASH" == "true" ]; then
             uploadArgs="--nofondash"
           else
             uploadArgs=""
           fi
+          
           if [ "$VERSION_NUM_MAJOR" ]; then
             uploadArgs="$uploadArgs --major=$VERSION_NUM_MAJOR --minor=$VERSION_NUM_MINOR"
           fi
-          if [ "$ORG_PASSWORD" ]; then
+          
+          if [ "$SECRET_ID" ]; then
+            uploadArgs="$uploadArgs --secretid=$SECRET_ID"
+          elif [ "$ORG_PASSWORD" ]; then
             uploadArgs="$uploadArgs --username=$ORG_USERNAME --password=$ORG_PASSWORD"
           fi
+          
+          if [ "$USERNAME_SECRET" ]; then
+            uploadArgs="$uploadArgs --usernamesecret=$USERNAME_SECRET"
+          fi
+          
+          if [ "$PASSWORD_SECRET" ]; then
+            uploadArgs="$uploadArgs --passwordsecret=$PASSWORD_SECRET"
+          fi
+          
           echo "uploadArgs = $uploadArgs"
-          node ./upload.js --namespace=$ORG_NAMESPACE --versionname=$VERSION_NAME --tickets=$jiraticket --repo=$REPO --commit=$GIT_COMMIT --package=$PACKAGE_NAME $uploadArgs
+          
+          echo "** Running 'node upload.js' ..."
+          node ./upload.js --namespace=$ORG_NAMESPACE --versionname=$VERSION_NAME --tickets=$jiraticket --repo=$REPO --commit=$GIT_COMMIT $uploadArgs
           popd
 
   clean:
