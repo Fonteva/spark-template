@@ -28,6 +28,10 @@ on:
       VERSION_NAME:
         required: true
         type: string
+      VERSION_NUM_MAJOR:
+        type: string
+      VERSION_NUM_MINOR:
+        type: string
       NO_FONDASH:
         required: false
         type: boolean
@@ -55,6 +59,8 @@ on:
         required: true
       AWS_SECRET_ACCESS_KEY:
         required: true
+      ORG_PASSWORD:
+        required: false
 
 jobs:
   build:
@@ -77,6 +83,8 @@ jobs:
       ORG_PASSWORD: ${{ secrets.ORG_PASSWORD }}
       ORG_ALIAS: ${{ inputs.ORG_ALIAS }}
       VERSION_NAME: ${{ inputs.VERSION_NAME }}
+      VERSION_NUM_MAJOR: ${{ inputs.VERSION_NUM_MAJOR }}
+      VERSION_NUM_MINOR: ${{ inputs.VERSION_NUM_MINOR }}
       FRAMEWORK_KEY_FILE: /home/ec2-user/framework.key
       NO_FONDASH: ${{ inputs.NO_FONDASH }}
     steps:
@@ -133,6 +141,12 @@ jobs:
             uploadArgs="--nofondash"
           else
             uploadArgs=""
+          fi
+          if [ "$VERSION_NUM_MAJOR" ]; then
+            uploadArgs="$uploadArgs --major=$VERSION_NUM_MAJOR --minor=$VERSION_NUM_MINOR"
+          fi
+          if [ "$ORG_PASSWORD" ]; then
+            uploadArgs="$uploadArgs --username=$ORG_USERNAME --password=$ORG_PASSWORD"
           fi
           echo "uploadArgs = $uploadArgs"
           node ./upload.js --namespace=$ORG_NAMESPACE --versionname=$VERSION_NAME --tickets=$jiraticket --repo=$REPO --commit=$GIT_COMMIT --package=$PACKAGE_NAME $uploadArgs
