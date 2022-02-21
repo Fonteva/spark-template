@@ -8,7 +8,7 @@ on:
   workflow_call:
     inputs:
       SECRET_ID:
-        required: true
+        type: string
       USERNAME_SECRET:
         type: string
       PASSWORD_SECRET:
