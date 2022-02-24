@@ -31,6 +31,10 @@ on:
       VERSION_NAME:
         required: true
         type: string
+      IS_PATCH:
+        required: false
+        type: boolean
+        default: false
       VERSION_NUM_MAJOR:
         type: string
       VERSION_NUM_MINOR:
@@ -88,6 +92,7 @@ jobs:
       ORG_PASSWORD: ${{ secrets.ORG_PASSWORD }}
       ORG_ALIAS: ${{ inputs.ORG_ALIAS }}
       VERSION_NAME: ${{ inputs.VERSION_NAME }}
+      IS_PATCH: ${{ inputs.IS_PATCH }}
       VERSION_NUM_MAJOR: ${{ inputs.VERSION_NUM_MAJOR }}
       VERSION_NUM_MINOR: ${{ inputs.VERSION_NUM_MINOR }}
       FRAMEWORK_KEY_FILE: /home/ec2-user/framework.key
@@ -155,8 +160,8 @@ jobs:
             uploadArgs=""
           fi
           
-          if [ "$VERSION_NUM_MAJOR" ]; then
-            uploadArgs="$uploadArgs --major=$VERSION_NUM_MAJOR --minor=$VERSION_NUM_MINOR"
+          if [ "$IS_PATCH" == "true" ]; then
+            uploadArgs="$uploadArgs --ispatch --major=$VERSION_NUM_MAJOR --minor=$VERSION_NUM_MINOR"
           fi
           
           if [ "$SECRET_ID" ]; then
