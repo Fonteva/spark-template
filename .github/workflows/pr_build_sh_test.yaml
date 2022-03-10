@@ -24,6 +24,10 @@ on:
         required: false
         type: boolean
         default: false
+      DO_NOT_BUILD:
+        required: false
+        type: boolean
+        default: false
     secrets:
       BUILD_SSH_RSA_KEY:
         required: true
@@ -53,26 +57,26 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-        if: ${{ !contains(github.event.pull_request.labels.*.name, 'DO NOT BUILD') }}
+        if: ${{ !inputs.DO_NOT_BUILD }}
         with:
           ssh-key: ${{ secrets.BUILD_SSH_RSA_KEY }}
           submodules: true
 
       - name: Update Build Submodule
-        if: ${{ github.event.action != 'closed' && !contains(github.event.pull_request.labels.*.name, 'DO NOT BUILD') }}
+        if: ${{ github.event.action != 'closed' && !inputs.DO_NOT_BUILD }}
         run: |
           cd build
           git checkout master
           git pull
 
       - name: NPM Install
-        if: ${{ github.event.action != 'closed' && inputs.RUN_NPM_INSTALL && !contains(github.event.pull_request.labels.*.name, 'DO NOT BUILD') }}
+        if: ${{ github.event.action != 'closed' && inputs.RUN_NPM_INSTALL && !inputs.DO_NOT_BUILD }}
         run: |
           npm install
           npm install @salesforce/sfdx-lwc-jest --save-dev
 
       - name: Authorize Devhub
-        if: ${{ !contains(github.event.pull_request.labels.*.name, 'DO NOT BUILD') }}
+        if: ${{ !inputs.DO_NOT_BUILD }}
         run: |
           if [ ! -e $DEVHUB_KEY_FILE ]; then
             echo "$DEVHUB_KEY" | base64 -d > $DEVHUB_KEY_FILE
@@ -86,7 +90,7 @@ jobs:
           fi
 
       - name: Build
-        if: ${{ github.event.action != 'closed' && !contains(github.event.pull_request.labels.*.name, 'DO NOT BUILD') }}
+        if: ${{ github.event.action != 'closed' && !inputs.DO_NOT_BUILD }}
         run: |
           ACTIVE_SCRATCH=$(sfdx force:data:soql:query -q "SELECT SignupUsername FROM ScratchOrgInfo where Status='Active' and SignupUsername='$SCRATCH_ORG_USERNAME'" -u $DEVHUB_USERNAME --json)
           COUNT=`echo "$ACTIVE_SCRATCH" | jq -r '.result.totalSize'`
@@ -116,7 +120,7 @@ jobs:
           cci flow run $CCI_FLOW_NAME --org $SCRATCH_ORG_ALIAS
 
       - name: Delete Scratch Org
-        if: ${{ github.event.action == 'closed' && !contains(github.event.pull_request.labels.*.name, 'DO NOT BUILD') }}
+        if: ${{ github.event.action == 'closed' && !inputs.DO_NOT_BUILD }}
         run: |
           echo "** Deleting scratch org $SCRATCH_ORG_USERNAME"
           sfdx force:data:record:delete --sobjecttype ActiveScratchOrg --targetusername $DEVHUB_USERNAME --where "SignupUsername='$SCRATCH_ORG_USERNAME'"
