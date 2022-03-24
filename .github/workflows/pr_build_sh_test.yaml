@@ -53,7 +53,7 @@ jobs:
       SCRATCH_ORG_USERNAME: ${{ inputs.SCRATCH_ORG_USERNAME }}
       SCRATCH_ORG_ALIAS: ${{ inputs.SCRATCH_ORG_ALIAS }}
       SFDX_CLIENT_ID: ${{ secrets.DEVHUB_CLIENTID }}
-      DEVHUB_KEY_FILE: ~/devhub.key
+      DEVHUB_KEY_FILE: ${{ env.HOME }}/devhub.key
     steps:
       - name: Checkout
         uses: actions/checkout@v2
