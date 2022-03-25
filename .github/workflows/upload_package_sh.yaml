@@ -95,7 +95,7 @@ jobs:
       IS_PATCH: ${{ inputs.IS_PATCH }}
       VERSION_NUM_MAJOR: ${{ inputs.VERSION_NUM_MAJOR }}
       VERSION_NUM_MINOR: ${{ inputs.VERSION_NUM_MINOR }}
-      FRAMEWORK_KEY_FILE: /home/ec2-user/framework.key
+      FRAMEWORK_KEY_FILE: framework.key
       NO_FONDASH: ${{ inputs.NO_FONDASH }}
     steps:
       - name: Checkout
@@ -120,10 +120,10 @@ jobs:
 
       - name: Upload
         run: |
-          if [ ! -e $FRAMEWORK_KEY_FILE ]; then
-            echo "$SFDX_HUB_KEY" > $FRAMEWORK_KEY_FILE
+          if [ ! -e ~/$FRAMEWORK_KEY_FILE ]; then
+            echo "$SFDX_HUB_KEY" > ~/$FRAMEWORK_KEY_FILE
             echo "** Running 'sfdx auth:jwt:grant' ..."
-            sfdx auth:jwt:grant --clientid $SFDX_CLIENT_ID --username $ORG_USERNAME --jwtkeyfile $FRAMEWORK_KEY_FILE --instanceurl $PROD_INST_URL
+            sfdx auth:jwt:grant --clientid $SFDX_CLIENT_ID --username $ORG_USERNAME --jwtkeyfile ~/$FRAMEWORK_KEY_FILE --instanceurl $PROD_INST_URL
           fi
                     
           GIT_COMMIT=$(git rev-parse HEAD)
@@ -179,7 +179,7 @@ jobs:
           else
             echo "** Running 'sfdx auth:jwt:grant' ..."
             # Running 'sfdx auth:jwt:grant' again to get a new access token:
-            sfdx auth:jwt:grant --clientid $SFDX_CLIENT_ID --username $ORG_USERNAME --jwtkeyfile $FRAMEWORK_KEY_FILE --instanceurl $PROD_INST_URL
+            sfdx auth:jwt:grant --clientid $SFDX_CLIENT_ID --username $ORG_USERNAME --jwtkeyfile ~/$FRAMEWORK_KEY_FILE --instanceurl $PROD_INST_URL
             orgInfo=$(sfdx force:org:display -u $ORG_USERNAME --json)
             accessToken=$(echo $orgInfo | jq -r .result.accessToken)
             instanceUrl=$(echo $orgInfo | jq -r .result.instanceUrl)
