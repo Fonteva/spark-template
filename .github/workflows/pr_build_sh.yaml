@@ -64,6 +64,7 @@ jobs:
       - name: Update Build Submodule
         if: ${{ github.event.action != 'closed' && !inputs.DO_NOT_BUILD }}
         run: |
+          cci version
           cd build
           git checkout master
           git pull
