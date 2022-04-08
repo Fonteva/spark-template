@@ -117,7 +117,7 @@ jobs:
           fi
           echo "** Running 'cci flow run $CCI_FLOW_NAME' ..."
           cci version
-          echo 'll' | cci flow run $CCI_FLOW_NAME --org $SCRATCH_ORG_ALIAS --debug
+          cci flow run $CCI_FLOW_NAME --org $SCRATCH_ORG_ALIAS
           echo "error info..."
           cci error info
           echo "printing log..."
