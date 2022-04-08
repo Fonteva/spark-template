@@ -64,7 +64,6 @@ jobs:
       - name: Update Build Submodule
         if: ${{ github.event.action != 'closed' && !inputs.DO_NOT_BUILD }}
         run: |
-          cci version
           cd build
           git checkout master
           git pull
@@ -117,7 +116,12 @@ jobs:
             cci org import $SCRATCH_ORG_USERNAME $SCRATCH_ORG_ALIAS
           fi
           echo "** Running 'cci flow run $CCI_FLOW_NAME' ..."
-          cci flow run $CCI_FLOW_NAME --org $SCRATCH_ORG_ALIAS
+          cci version
+          echo 'll' | cci flow run $CCI_FLOW_NAME --org $SCRATCH_ORG_ALIAS --debug
+          echo "error info..."
+          cci error info
+          echo "printing log..."
+          cat ~/.cumulusci/logs/cci.log
 
       - name: Delete Scratch Org
         if: ${{ github.event.action == 'closed' }}
