@@ -107,7 +107,7 @@ jobs:
           else
             echo "** Creating new scratch org"
             echo "** Running 'sfdx force:org:create' ..."
-            sfdx force:org:create -f $SCRATCH_ORG_JSON username=$SCRATCH_ORG_USERNAME -d 30
+            sfdx force:org:create -f $SCRATCH_ORG_JSON username=$SCRATCH_ORG_USERNAME -d 30 --apiversion 50.0
             echo "** Running 'sfdx force:config:set' ..."
             sfdx force:config:set defaultdevhubusername=$DEVHUB_USERNAME
             echo "** Running 'sfdx force:user:password:generate' ..."
