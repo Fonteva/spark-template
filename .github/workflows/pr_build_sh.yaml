@@ -123,13 +123,17 @@ jobs:
           echo "printing log..."
           cat ~/.cumulusci/logs/cci.log
 
-      - name: Delete Scratch Org
-        if: ${{ github.event.action == 'closed' }}
+      - name: Print log
+        if: ${{ github.event.action != 'closed' && inputs.RUN_NPM_INSTALL && !inputs.DO_NOT_BUILD }}
         run: |
           echo "error info1..."
           cci error info
           echo "printing log1..."
           cat ~/.cumulusci/logs/cci.log
+
+      - name: Delete Scratch Org
+        if: ${{ github.event.action == 'closed' }}
+        run: |
           echo "** Deleting scratch org $SCRATCH_ORG_USERNAME"
           sfdx force:data:record:delete --sobjecttype ActiveScratchOrg --targetusername $DEVHUB_USERNAME --where "SignupUsername='$SCRATCH_ORG_USERNAME'"
           rm -f ~/.sfdx/$SCRATCH_ORG_USERNAME.json
