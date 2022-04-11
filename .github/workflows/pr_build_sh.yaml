@@ -128,8 +128,6 @@ jobs:
         run: |
           echo "error info1..."
           cci error info
-          echo "printing log1..."
-          cat ~/.cumulusci/logs/cci.log
 
       - name: Delete Scratch Org
         if: ${{ github.event.action == 'closed' }}
