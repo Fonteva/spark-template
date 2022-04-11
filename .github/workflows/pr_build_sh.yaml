@@ -124,7 +124,7 @@ jobs:
           cat ~/.cumulusci/logs/cci.log
 
       - name: Print log
-        if: ${{ github.event.action != 'closed' && inputs.RUN_NPM_INSTALL && !inputs.DO_NOT_BUILD }}
+        if: ${{ github.event.action != 'closed' }}
         run: |
           echo "error info1..."
           cci error info
