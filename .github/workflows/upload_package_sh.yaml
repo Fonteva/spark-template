@@ -127,8 +127,10 @@ jobs:
           else 
             echo "error with [ ! -e ~/$FRAMEWORK_KEY_FILE ]"
           fi
-                 
+          
           cat ~/$FRAMEWORK_KEY_FILE
+          echo $ORG_USERNAME
+          echo $SFDX_CLIENT_ID
           GIT_COMMIT=$(git rev-parse HEAD)
           echo "** Commit = $GIT_COMMIT"
           
