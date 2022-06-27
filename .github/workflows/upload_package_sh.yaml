@@ -180,7 +180,11 @@ jobs:
             echo "** Running 'sfdx auth:jwt:grant' ..."
             # Running 'sfdx auth:jwt:grant' again to get a new access token:
             sfdx auth:jwt:grant --clientid $SFDX_CLIENT_ID --username $ORG_USERNAME --jwtkeyfile ~/$FRAMEWORK_KEY_FILE --instanceurl $PROD_INST_URL
+            echo $SFDX_CLIENT_ID
+            echo $ORG_USERNAME
+            cat $FRAMEWORK_KEY_FILE
             orgInfo=$(sfdx force:org:display -u $ORG_USERNAME --json)
+            echo orgInfo
             accessToken=$(echo $orgInfo | jq -r .result.accessToken)
             instanceUrl=$(echo $orgInfo | jq -r .result.instanceUrl)
             uploadArgs="$uploadArgs --accesstoken=$accessToken --instanceurl=$instanceUrl"
