@@ -127,7 +127,8 @@ jobs:
           else 
             echo "error with [ ! -e ~/$FRAMEWORK_KEY_FILE ]"
           fi
-                    
+                 
+          cat ~/$FRAMEWORK_KEY_FILE
           GIT_COMMIT=$(git rev-parse HEAD)
           echo "** Commit = $GIT_COMMIT"
           
