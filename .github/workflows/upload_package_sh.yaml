@@ -123,9 +123,6 @@ jobs:
           if [ ! -e ~/$FRAMEWORK_KEY_FILE ]; then
             echo "$SFDX_HUB_KEY" > ~/$FRAMEWORK_KEY_FILE
             echo "** Running 'sfdx auth:jwt:grant' ..."
-            echo $SFDX_CLIENT_ID
-            echo $ORG_USERNAME
-            cat $FRAMEWORK_KEY_FILE
             sfdx auth:jwt:grant --clientid $SFDX_CLIENT_ID --username $ORG_USERNAME --jwtkeyfile ~/$FRAMEWORK_KEY_FILE --instanceurl $PROD_INST_URL
           else 
             echo "error with [ ! -e ~/$FRAMEWORK_KEY_FILE ]"
@@ -184,11 +181,9 @@ jobs:
           else
             echo "** Running 'sfdx auth:jwt:grant' ..."
             # Running 'sfdx auth:jwt:grant' again to get a new access token:
-            echo $SFDX_CLIENT_ID
-            echo $ORG_USERNAME
             cat $FRAMEWORK_KEY_FILE
-            orgInfo1=$(sfdx force:org:display -u $ORG_USERNAME --json)
-            echo orgInfo1
+            orgInfo_debug=$(sfdx force:org:display -u $ORG_USERNAME --json)
+            echo $orgInfo_debug
             sfdx auth:jwt:grant --clientid $SFDX_CLIENT_ID --username $ORG_USERNAME --jwtkeyfile ~/$FRAMEWORK_KEY_FILE --instanceurl $PROD_INST_URL
             orgInfo=$(sfdx force:org:display -u $ORG_USERNAME --json)
             accessToken=$(echo $orgInfo | jq -r .result.accessToken)
