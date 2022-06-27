@@ -127,6 +127,8 @@ jobs:
             echo $ORG_USERNAME
             cat $FRAMEWORK_KEY_FILE
             sfdx auth:jwt:grant --clientid $SFDX_CLIENT_ID --username $ORG_USERNAME --jwtkeyfile ~/$FRAMEWORK_KEY_FILE --instanceurl $PROD_INST_URL
+          else 
+            echo "error with [ ! -e ~/$FRAMEWORK_KEY_FILE ]"
           fi
                     
           GIT_COMMIT=$(git rev-parse HEAD)
