@@ -124,13 +124,7 @@ jobs:
             echo "$SFDX_HUB_KEY" > ~/$FRAMEWORK_KEY_FILE
             echo "** Running 'sfdx auth:jwt:grant' ..."
             sfdx auth:jwt:grant --clientid $SFDX_CLIENT_ID --username $ORG_USERNAME --jwtkeyfile ~/$FRAMEWORK_KEY_FILE --instanceurl $PROD_INST_URL
-          else 
-            echo "error with [ ! -e ~/$FRAMEWORK_KEY_FILE ]"
           fi
-          
-          cat ~/$FRAMEWORK_KEY_FILE
-          echo $ORG_USERNAME
-          echo $SFDX_CLIENT_ID
           GIT_COMMIT=$(git rev-parse HEAD)
           echo "** Commit = $GIT_COMMIT"
           
@@ -184,9 +178,6 @@ jobs:
           else
             echo "** Running 'sfdx auth:jwt:grant' ..."
             # Running 'sfdx auth:jwt:grant' again to get a new access token:
-            cat $FRAMEWORK_KEY_FILE
-            orgInfo_debug=$(sfdx force:org:display -u $ORG_USERNAME --json)
-            echo $orgInfo_debug
             sfdx auth:jwt:grant --clientid $SFDX_CLIENT_ID --username $ORG_USERNAME --jwtkeyfile ~/$FRAMEWORK_KEY_FILE --instanceurl $PROD_INST_URL
             orgInfo=$(sfdx force:org:display -u $ORG_USERNAME --json)
             accessToken=$(echo $orgInfo | jq -r .result.accessToken)
