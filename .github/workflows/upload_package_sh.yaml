@@ -3,6 +3,7 @@ name: Upload Package
 env:
   SFDX_USE_GENERIC_UNIX_KEYCHAIN: "true"
   PROD_INST_URL: "https://login.salesforce.com"
+  FRAMEWORK_KEY_FILE: framework.key
 
 on:
   workflow_call:
@@ -95,7 +96,6 @@ jobs:
       IS_PATCH: ${{ inputs.IS_PATCH }}
       VERSION_NUM_MAJOR: ${{ inputs.VERSION_NUM_MAJOR }}
       VERSION_NUM_MINOR: ${{ inputs.VERSION_NUM_MINOR }}
-      FRAMEWORK_KEY_FILE: framework.key
       NO_FONDASH: ${{ inputs.NO_FONDASH }}
     steps:
       - name: Checkout
@@ -118,18 +118,27 @@ jobs:
           repository: Fonteva/ops-scripts
           path: ops-scripts
 
-      - name: Upload
+      - name: Authenticate to Packaging Org
         run: |
-          if [ ! -e ~/$FRAMEWORK_KEY_FILE ]; then
-            echo "$SFDX_HUB_KEY" > ~/$FRAMEWORK_KEY_FILE
-            echo "** Running 'sfdx auth:jwt:grant' ..."
-            sfdx auth:jwt:grant --clientid $SFDX_CLIENT_ID --username $ORG_USERNAME --jwtkeyfile ~/$FRAMEWORK_KEY_FILE --instanceurl $PROD_INST_URL
-          fi
+          echo "$SFDX_HUB_KEY" > ~/$FRAMEWORK_KEY_FILE
+          sfdx auth:jwt:grant --clientid $SFDX_CLIENT_ID --username $ORG_USERNAME --jwtkeyfile ~/$FRAMEWORK_KEY_FILE --instanceurl $PROD_INST_URL
+          
+      - name: Deploy Source Files
+        run: |
+          cciOrgVar="CUMULUSCI_ORG_$ORG_ALIAS"
+          echo $cciOrgVar
+          printf -v $cciOrgVar '{"username": "'$ORG_USERNAME'", "instance_url": "'$PROD_INST_URL'"}'
+          export $cciOrgVar
+          echo ${!cciOrgVar}
+          echo "** Running 'cci flow run $CCI_FLOW_NAME' ..."
+          cci flow run $CCI_FLOW_NAME --org $ORG_ALIAS
                     
+      - name: Upload Package
+        run: |
           GIT_COMMIT=$(git rev-parse HEAD)
           echo "** Commit = $GIT_COMMIT"
           
-          # getting the jira tickets
+          echo "** Getting Jira tickets ..."
           git log --first-parent --oneline --since="24 hours ago" > test.txt
           sed -i -e 's/[[:blank:]]/-/g' test.txt
           jiraticket=`grep -P -o "(?i)PD-[0-9]{1,}" test.txt | tr '\n' ',' | tr [a-z] [A-Z]`
@@ -139,14 +148,6 @@ jobs:
           else
             echo "jiraticket = $jiraticket"
           fi;
-          
-          cciOrgVar="CUMULUSCI_ORG_$ORG_ALIAS"
-          echo $cciOrgVar
-          printf -v $cciOrgVar '{"username": "'$ORG_USERNAME'", "instance_url": "'$PROD_INST_URL'"}'
-          export $cciOrgVar
-          echo ${!cciOrgVar}
-          echo "** Running 'cci flow run $CCI_FLOW_NAME' ..."
-          cci flow run $CCI_FLOW_NAME --org $ORG_ALIAS
           
           echo "** Running 'npm install' ..."
           pushd ./ops-scripts/uploads-scripts/github
@@ -177,9 +178,6 @@ jobs:
           elif [ "$ORG_PASSWORD" ]; then
             uploadArgs="$uploadArgs --username=$ORG_USERNAME --password=$ORG_PASSWORD"
           else
-            echo "** Running 'sfdx auth:jwt:grant' ..."
-            # Running 'sfdx auth:jwt:grant' again to get a new access token:
-            sfdx auth:jwt:grant --clientid $SFDX_CLIENT_ID --username $ORG_USERNAME --jwtkeyfile ~/$FRAMEWORK_KEY_FILE --instanceurl $PROD_INST_URL
             orgInfo=$(sfdx force:org:display -u $ORG_USERNAME --json)
             accessToken=$(echo $orgInfo | jq -r .result.accessToken)
             instanceUrl=$(echo $orgInfo | jq -r .result.instanceUrl)
@@ -197,6 +195,10 @@ jobs:
     needs: [ build ]
     runs-on: [self-hosted, prod]
     steps:
+      - name: Remove key file
+        run: |
+          rm -f ~/$FRAMEWORK_KEY_FILE
+
       - name: Remove workspace folder
         run: |
           rm -rf * $GITHUB_WORKSPACE
