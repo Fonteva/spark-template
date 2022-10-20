@@ -56,7 +56,7 @@ jobs:
       DEVHUB_KEY_FILE: devhub.key
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           ssh-key: ${{ secrets.BUILD_SSH_RSA_KEY }}
           submodules: true
