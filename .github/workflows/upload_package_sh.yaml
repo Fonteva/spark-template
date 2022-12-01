@@ -33,7 +33,6 @@ on:
         required: true
         type: string
       IS_PATCH:
-        required: false
         type: boolean
         default: false
       VERSION_NUM_MAJOR:
@@ -41,13 +40,17 @@ on:
       VERSION_NUM_MINOR:
         type: string
       NO_FONDASH:
-        required: false
         type: boolean
         default: false
       NO_BUILD_SUBMODULE:
-        required: false
         type: boolean
         default: false
+      CHECK_DEPLOY:
+        type: boolean
+        default: false
+      CHECK_CCI_FLOW_NAME:
+        type: string
+        default: ${{ inputs.CCI_FLOW_NAME }}
     secrets:
       BUILD_SSH_RSA_KEY:
         required: true
@@ -97,6 +100,7 @@ jobs:
       VERSION_NUM_MAJOR: ${{ inputs.VERSION_NUM_MAJOR }}
       VERSION_NUM_MINOR: ${{ inputs.VERSION_NUM_MINOR }}
       NO_FONDASH: ${{ inputs.NO_FONDASH }}
+      CHECK_CCI_FLOW_NAME: ${{ inputs.CHECK_CCI_FLOW_NAME }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -123,7 +127,19 @@ jobs:
           echo "$SFDX_HUB_KEY" > ~/$FRAMEWORK_KEY_FILE
           sfdx auth:jwt:grant --clientid $SFDX_CLIENT_ID --username $ORG_USERNAME --jwtkeyfile ~/$FRAMEWORK_KEY_FILE --instanceurl $PROD_INST_URL
           
+      - name: Check Deployment
+        if: ${{ inputs.CHECK_DEPLOY }}
+        run: |
+          cciOrgVar="CUMULUSCI_ORG_$ORG_ALIAS"
+          echo $cciOrgVar
+          printf -v $cciOrgVar '{"username": "'$ORG_USERNAME'", "instance_url": "'$PROD_INST_URL'"}'
+          export $cciOrgVar
+          echo ${!cciOrgVar}
+          echo "** Running 'cci flow run $CHECK_CCI_FLOW_NAME' ..."
+          cci flow run $CHECK_CCI_FLOW_NAME --org $ORG_ALIAS
+          
       - name: Deploy Source Files
+        if: ${{ !inputs.CHECK_DEPLOY }}
         run: |
           cciOrgVar="CUMULUSCI_ORG_$ORG_ALIAS"
           echo $cciOrgVar
@@ -134,6 +150,7 @@ jobs:
           cci flow run $CCI_FLOW_NAME --org $ORG_ALIAS
                     
       - name: Upload Package
+        if: ${{ !inputs.CHECK_DEPLOY }}
         run: |
           GIT_COMMIT=$(git rev-parse HEAD)
           echo "** Commit = $GIT_COMMIT"
