@@ -3,90 +3,105 @@ name: Upload Package
 env:
   SFDX_USE_GENERIC_UNIX_KEYCHAIN: "true"
   PROD_INST_URL: "https://login.salesforce.com"
-  FRAMEWORK_KEY_FILE: framework.key
+  SFDX_KEY_FILE_NAME: framework.key
 
 on:
   workflow_call:
     inputs:
-      SECRET_ID:
+      AWS_SECRET_ID:
+        description: The ID of the AWS secret that contains packaging org credentials.
         type: string
-      USERNAME_SECRET:
+      AWS_USERNAME_SECRET:
+        description: The name of the AWS secret value that contains the org user name to use when authenticating to the packaging org to uploade a new package version.  Required if AWS_SECRET_ID is set.
         type: string
-      PASSWORD_SECRET:
+      AWS_PASSWORD_SECRET:
+        description: The name of the AWS secret value that contains the org password to use when authenticating to the packaging org to uploade a new package version.  Required if AWS_SECRET_ID is set.
         type: string
       REPO:
-        required: true
+        description: The name of the Git repo.  Required if UPLOAD_PACKAGE is true.
         type: string
       CCI_FLOW_NAME:
-        required: true
+        description: The name of a CumulusCI flow to deploy the source files to the packaging org.
         type: string
       ORG_USERNAME:
-        required: true
+        descripton: The user name to use when authenticating to the packaging org.  Required if SFDX_CLIENT_ID is set.
         type: string
       ORG_NAMESPACE:
-        required: true
+        description: The namespace of the packaging org.  Required if UPLOAD_PACKAGE is true.
         type: string
       ORG_ALIAS:
+        description: The org alias to use for CumulusCI and sfdx commands.
         required: true
         type: string
       VERSION_NAME:
-        required: true
+        description: The version name to assign when uploading a new package version.  Required if UPLOAD_PACKAGE is true.
         type: string
       IS_PATCH:
+        description: If true, do a patch upload instead of a regular package upload.
         type: boolean
         default: false
       VERSION_NUM_MAJOR:
+        description: The major version number of the patch.  Required if IS_PATCH is true.
         type: string
       VERSION_NUM_MINOR:
+        description: The minor version number of the patch.  Required if IS_PATCH is true.
         type: string
       NO_FONDASH:
+        description: If true, do not post the new package version details to Fondash.
         type: boolean
         default: false
-      NO_BUILD_SUBMODULE:
-        type: boolean
-        default: false
-      UPLOAD_PACKAGE:
+      UPDATE_BUILD_SUBMODULE:
+        description: If true, update the repo's build submodule after checking out.
         type: boolean
         default: true
+      UPLOAD_PACKAGE:
+        description: If true, upload a new package version after deploying the source files.
+        type: boolean
+        default: true
+      SFDX_DEPLOY:
+        description: "An sfdx command to deploy the source files to the packaging org.  For example: 'force:mdapi:deploy -d src -w 10'"
+        type: string
     secrets:
       BUILD_SSH_RSA_KEY:
-        required: true
-      DEVHUB_CLIENTID:
-        required: true
-      DEVHUB_KEY:
-        required: true
-      DEVHUB_USERNAME:
+        description: The RSA private key to use to check out source files.
         required: true
       CUMULUSCI_SERVICE_github:
-        required: true
+        description: The CumulusCI GitHub service account.  Required if CCI_FLOW_NAME is set.
+        required: false
       SFDX_CLIENT_ID:
-        required: true
+        description: The client ID to use when authenticating to the packaging org (JWT auth).  Either SFDX_CLIENT_ID or SFDX_PACKAGING_ORG_AUTH_JSON should be set, not both.
+        required: false
       SFDX_HUB_KEY:
-        required: true
+        description: The private key to use when authenticating to the packaging org (JWT auth).  Required if SFDX_CLIENT_ID is set.
+        required: false
+      SFDX_PACKAGING_ORG_AUTH_JSON:
+        description: The Salesforce authentication URL to use when authenticating to the packaging org (URL auth).  This should contain the output of the command 'sfdx force:org:display -u <OrgUsername> --verbose --json'.  Either SFDX_CLIENT_ID or SFDX_PACKAGING_ORG_AUTH_JSON should be set, not both.
+        required: false
       AWS_ACCESS_KEY_ID:
-        required: true
+        description: The ID of the AWS access key to use when retrieving secret values.  Required if AWS_SECRET_ID is set.
+        required: false
       AWS_SECRET_ACCESS_KEY:
-        required: true
+        description: The AWS access key secret to use when retrieving secret values.  Required if AWS_SECRET_ID is set.
+        required: false
       ORG_PASSWORD:
+        description: The org password to use when when uploading a new package version.
         required: false
 
 jobs:
   build:
     runs-on: [self-hosted, prod]
     env:
-      DEVHUB_USERNAME: ${{ secrets.DEVHUB_USERNAME }}
-      DEVHUB_CLIENTID: ${{ secrets.DEVHUB_CLIENTID }}
-      DEVHUB_KEY: ${{ secrets.DEVHUB_KEY }}
       CUMULUSCI_SERVICE_github: ${{ secrets.CUMULUSCI_SERVICE_GITHUB }}
       SFDX_CLIENT_ID: ${{ secrets.SFDX_CLIENT_ID }}
       SFDX_HUB_KEY: ${{ secrets.SFDX_HUB_KEY }}
+      SFDX_PACKAGING_ORG_AUTH_JSON: ${{ secrets.SFDX_PACKAGING_ORG_AUTH_JSON }}
       MARKETPLACE_TOKEN: ${{ secrets.MARKETPLACE_TOKEN }}
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       CCI_FLOW_NAME: ${{ inputs.CCI_FLOW_NAME }}
-      SECRET_ID: ${{ inputs.SECRET_ID }}
-      USERNAME_SECRET: ${{ inputs.USERNAME_SECRET }}
-      PASSWORD_SECRET: ${{ inputs.PASSWORD_SECRET }}
+      AWS_SECRET_ID: ${{ inputs.AWS_SECRET_ID }}
+      AWS_USERNAME_SECRET: ${{ inputs.AWS_USERNAME_SECRET }}
+      AWS_PASSWORD_SECRET: ${{ inputs.AWS_PASSWORD_SECRET }}
       REPO: ${{ inputs.REPO }}
       ORG_USERNAME: ${{ inputs.ORG_USERNAME }}
       ORG_NAMESPACE: ${{ inputs.ORG_NAMESPACE }}
@@ -97,6 +112,7 @@ jobs:
       VERSION_NUM_MAJOR: ${{ inputs.VERSION_NUM_MAJOR }}
       VERSION_NUM_MINOR: ${{ inputs.VERSION_NUM_MINOR }}
       NO_FONDASH: ${{ inputs.NO_FONDASH }}
+      SFDX_DEPLOY: ${{ inputs.SFDX_DEPLOY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -105,26 +121,51 @@ jobs:
           submodules: true
 
       - name: Update Build Submodule
-        if: ${{ !inputs.NO_BUILD_SUBMODULE }}
+        if: ${{ inputs.UPDATE_BUILD_SUBMODULE }}
         run: |
           cd build
           git checkout master
           git pull
 
       - name: Checkout ops-scripts
+        if: ${{ inputs.UPLOAD_PACKAGE }}
         uses: actions/checkout@v3
         with:
           ssh-key: ${{ secrets.BUILD_SSH_RSA_KEY }}
           repository: Fonteva/ops-scripts
           path: ops-scripts
 
-      - name: Authenticate to Packaging Org
+      - name: Authenticate to Packaging Org (JWT)
+        if: ${{ inputs.SFDX_CLIENT_ID }}
         run: |
-          echo "$SFDX_HUB_KEY" > ~/$FRAMEWORK_KEY_FILE
-          sfdx auth:jwt:grant --clientid $SFDX_CLIENT_ID --username $ORG_USERNAME --jwtkeyfile ~/$FRAMEWORK_KEY_FILE --instanceurl $PROD_INST_URL
+          if [ -z "$ORG_USERNAME" ];then
+            echo "ORG_USERNAME input param is required if SFDX_CLIENT_ID is set"
+            exit -1
+          fi
+
+          if [ -z "$SFDX_HUB_KEY" ];then
+            echo "SFDX_HUB_KEY input param is required if SFDX_CLIENT_ID is set"
+            exit -1
+          fi
+
+          echo "$SFDX_HUB_KEY" > ~/$SFDX_KEY_FILE_NAME
+          sfdx auth:jwt:grant --clientid $SFDX_CLIENT_ID --username $ORG_USERNAME --jwtkeyfile ~/$SFDX_KEY_FILE_NAME --instanceurl $PROD_INST_URL
+
+      - name: Authenticate to Packaging Org (Auth URL)
+        if: ${{ inputs.SFDX_PACKAGING_ORG_AUTH_JSON }}
+        run: |
+          echo "$SFDX_PACKAGING_ORG_AUTH_JSON" > authFile.json
+          sfdx auth:sfdxurl:store -f authFile.json -a $ORG_ALIAS
+          rm -f authFile.json
           
-      - name: Deploy Source Files
+      - name: Deploy Source Files (cci - JWT)
+        if: ${{ inputs.SFDX_CLIENT_ID && inputs.CCI_FLOW_NAME }}
         run: |
+          if [ -z "$CUMULUSCI_SERVICE_github" ];then
+            echo "CUMULUSCI_SERVICE_github input param is required if CCI_FLOW_NAME is set"
+            exit -1
+          fi
+
           cciOrgVar="CUMULUSCI_ORG_$ORG_ALIAS"
           echo $cciOrgVar
           printf -v $cciOrgVar '{"username": "'$ORG_USERNAME'", "instance_url": "'$PROD_INST_URL'"}'
@@ -132,10 +173,38 @@ jobs:
           echo ${!cciOrgVar}
           echo "** Running 'cci flow run $CCI_FLOW_NAME' ..."
           cci flow run $CCI_FLOW_NAME --org $ORG_ALIAS
+          
+      - name: Deploy Source Files (cci - Auth URL)
+        if: ${{ inputs.SFDX_PACKAGING_ORG_AUTH_JSON && inputs.CCI_FLOW_NAME }}
+        run: |
+          cci org import $ORG_ALIAS $ORG_ALIAS
+          echo "** Running 'cci flow run $CCI_FLOW_NAME' ..."
+          cci flow run $CCI_FLOW_NAME --org $ORG_ALIAS
+          
+      - name: Deploy Source Files (sfdx - Auth URL)
+        if: ${{ inputs.SFDX_PACKAGING_ORG_AUTH_JSON && inputs.SFDX_DEPLOY }}
+        run: |
+          echo "** Running 'sfdx $SFDX_DEPLOY' ..."
+          sfdx $SFDX_DEPLOY -u $ORG_ALIAS
                     
       - name: Upload Package
         if: ${{ inputs.UPLOAD_PACKAGE }}
         run: |
+          if [ -z "$REPO" ];then
+            echo "REPO input param is required if UPLOAD_PACKAGE is true"
+            exit -1
+          fi
+
+          if [ -z "$ORG_NAMESPACE" ];then
+            echo "ORG_NAMESPACE input param is required if UPLOAD_PACKAGE is true"
+            exit -1
+          fi
+
+          if [ -z "$VERSION_NAME" ];then
+            echo "VERSION_NAME input param is required if UPLOAD_PACKAGE is true"
+            exit -1
+          fi
+
           GIT_COMMIT=$(git rev-parse HEAD)
           echo "** Commit = $GIT_COMMIT"
           
@@ -166,19 +235,23 @@ jobs:
             uploadArgs="$uploadArgs --ispatch --major=$VERSION_NUM_MAJOR --minor=$VERSION_NUM_MINOR"
           fi
           
-          if [ "$SECRET_ID" ]; then
-            uploadArgs="$uploadArgs --secretid=$SECRET_ID"
+          if [ "$AWS_SECRET_ID" ]; then
+            uploadArgs="$uploadArgs --secretid=$AWS_SECRET_ID"
             
-            if [ "$USERNAME_SECRET" ]; then
-              uploadArgs="$uploadArgs --usernamesecret=$USERNAME_SECRET"
+            if [ "$AWS_USERNAME_SECRET" ]; then
+              uploadArgs="$uploadArgs --usernamesecret=$AWS_USERNAME_SECRET"
             fi
           
-            if [ "$PASSWORD_SECRET" ]; then
-              uploadArgs="$uploadArgs --passwordsecret=$PASSWORD_SECRET"
+            if [ "$AWS_PASSWORD_SECRET" ]; then
+              uploadArgs="$uploadArgs --passwordsecret=$AWS_PASSWORD_SECRET"
             fi
           elif [ "$ORG_PASSWORD" ]; then
             uploadArgs="$uploadArgs --username=$ORG_USERNAME --password=$ORG_PASSWORD"
           else
+            if [ -z "$ORG_USERNAME" ]; then
+              export ORG_USERNAME=$ORG_ALIAS
+            fi
+
             orgInfo=$(sfdx force:org:display -u $ORG_USERNAME --json)
             accessToken=$(echo $orgInfo | jq -r .result.accessToken)
             instanceUrl=$(echo $orgInfo | jq -r .result.instanceUrl)
@@ -198,7 +271,7 @@ jobs:
     steps:
       - name: Remove key file
         run: |
-          rm -f ~/$FRAMEWORK_KEY_FILE
+          rm -f ~/$SFDX_KEY_FILE_NAME
 
       - name: Remove workspace folder
         run: |
