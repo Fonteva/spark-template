@@ -24,7 +24,7 @@ on:
         description: The name of a CumulusCI flow to deploy the source files to the packaging org.
         type: string
       ORG_USERNAME:
-        description: The user name to use when authenticating to the packaging org.  Required if SFDX_CLIENT_ID is set.
+        description: The user name to use when authenticating to the packaging org.  Required if AUTH_MODE is 'JWT'.
         type: string
       ORG_NAMESPACE:
         description: The namespace of the packaging org.  Required if UPLOAD_PACKAGE is true.
@@ -61,6 +61,10 @@ on:
       SFDX_DEPLOY:
         description: "An sfdx command to deploy the source files to the packaging org.  For example: 'force:mdapi:deploy -d src -w 10'"
         type: string
+      AUTH_MODE:
+        description: How to authenticate to the packaging org.  If set to 'JWT', the SFDX_CLIENT_ID and SFDX_HUB_KEY secrets are required.  If set to 'URL', the SFDX_PACKAGING_ORG_AUTH_JSON secret is required.
+        type: string
+        default: JWT
     secrets:
       BUILD_SSH_RSA_KEY:
         description: The RSA private key to use to check out source files.
@@ -69,13 +73,13 @@ on:
         description: The CumulusCI GitHub service account.  Required if CCI_FLOW_NAME is set.
         required: false
       SFDX_CLIENT_ID:
-        description: The client ID to use when authenticating to the packaging org (JWT auth).  Either SFDX_CLIENT_ID or SFDX_PACKAGING_ORG_AUTH_JSON should be set, not both.
+        description: The client ID to use when authenticating to the packaging org (JWT auth).
         required: false
       SFDX_HUB_KEY:
         description: The private key to use when authenticating to the packaging org (JWT auth).  Required if SFDX_CLIENT_ID is set.
         required: false
       SFDX_PACKAGING_ORG_AUTH_JSON:
-        description: The Salesforce authentication URL to use when authenticating to the packaging org (URL auth).  This should contain the output of the command 'sfdx force:org:display -u <OrgUsername> --verbose --json'.  Either SFDX_CLIENT_ID or SFDX_PACKAGING_ORG_AUTH_JSON should be set, not both.
+        description: The Salesforce authentication URL to use when authenticating to the packaging org (URL auth).  This should contain the output of the command 'sfdx force:org:display -u <OrgUsername> --verbose --json'.
         required: false
       AWS_ACCESS_KEY_ID:
         description: The ID of the AWS access key to use when retrieving secret values.  Required if AWS_SECRET_ID is set.
@@ -136,15 +140,15 @@ jobs:
           path: ops-scripts
 
       - name: Authenticate to Packaging Org (JWT)
-        if: ${{ secrets.SFDX_CLIENT_ID }}
+        if: ${{ inputs.AUTH_MODE == 'JWT' }}
         run: |
           if [ -z "$ORG_USERNAME" ];then
-            echo "ORG_USERNAME input param is required if SFDX_CLIENT_ID is set"
+            echo "ORG_USERNAME input param is required if inputs.AUTH_MODE == 'JWT'"
             exit -1
           fi
 
           if [ -z "$SFDX_HUB_KEY" ];then
-            echo "SFDX_HUB_KEY input param is required if SFDX_CLIENT_ID is set"
+            echo "SFDX_HUB_KEY input param is required if inputs.AUTH_MODE == 'JWT'"
             exit -1
           fi
 
@@ -152,14 +156,14 @@ jobs:
           sfdx auth:jwt:grant --clientid $SFDX_CLIENT_ID --username $ORG_USERNAME --jwtkeyfile ~/$SFDX_KEY_FILE_NAME --instanceurl $PROD_INST_URL
 
       - name: Authenticate to Packaging Org (Auth URL)
-        if: ${{ secrets.SFDX_PACKAGING_ORG_AUTH_JSON }}
+        if: ${{ inputs.AUTH_MODE == 'URL' }}
         run: |
           echo "$SFDX_PACKAGING_ORG_AUTH_JSON" > authFile.json
           sfdx auth:sfdxurl:store -f authFile.json -a $ORG_ALIAS
           rm -f authFile.json
           
       - name: Deploy Source Files (cci - JWT)
-        if: ${{ secrets.SFDX_CLIENT_ID && inputs.CCI_FLOW_NAME }}
+        if: ${{ inputs.AUTH_MODE == 'JWT' && inputs.CCI_FLOW_NAME }}
         run: |
           if [ -z "$CUMULUSCI_SERVICE_github" ];then
             echo "CUMULUSCI_SERVICE_github input param is required if CCI_FLOW_NAME is set"
@@ -175,14 +179,14 @@ jobs:
           cci flow run $CCI_FLOW_NAME --org $ORG_ALIAS
           
       - name: Deploy Source Files (cci - Auth URL)
-        if: ${{ secrets.SFDX_PACKAGING_ORG_AUTH_JSON && inputs.CCI_FLOW_NAME }}
+        if: ${{ inputs.AUTH_MODE == 'URL' && inputs.CCI_FLOW_NAME }}
         run: |
           cci org import $ORG_ALIAS $ORG_ALIAS
           echo "** Running 'cci flow run $CCI_FLOW_NAME' ..."
           cci flow run $CCI_FLOW_NAME --org $ORG_ALIAS
           
       - name: Deploy Source Files (sfdx - Auth URL)
-        if: ${{ secrets.SFDX_PACKAGING_ORG_AUTH_JSON && inputs.SFDX_DEPLOY }}
+        if: ${{ inputs.AUTH_MODE == 'URL' && inputs.SFDX_DEPLOY }}
         run: |
           echo "** Running 'sfdx $SFDX_DEPLOY' ..."
           sfdx $SFDX_DEPLOY -u $ORG_ALIAS
