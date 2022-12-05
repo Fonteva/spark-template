@@ -136,7 +136,7 @@ jobs:
           path: ops-scripts
 
       - name: Authenticate to Packaging Org (JWT)
-        if: ${{ inputs.SFDX_CLIENT_ID }}
+        if: ${{ secrets.SFDX_CLIENT_ID }}
         run: |
           if [ -z "$ORG_USERNAME" ];then
             echo "ORG_USERNAME input param is required if SFDX_CLIENT_ID is set"
@@ -152,14 +152,14 @@ jobs:
           sfdx auth:jwt:grant --clientid $SFDX_CLIENT_ID --username $ORG_USERNAME --jwtkeyfile ~/$SFDX_KEY_FILE_NAME --instanceurl $PROD_INST_URL
 
       - name: Authenticate to Packaging Org (Auth URL)
-        if: ${{ inputs.SFDX_PACKAGING_ORG_AUTH_JSON }}
+        if: ${{ secrets.SFDX_PACKAGING_ORG_AUTH_JSON }}
         run: |
           echo "$SFDX_PACKAGING_ORG_AUTH_JSON" > authFile.json
           sfdx auth:sfdxurl:store -f authFile.json -a $ORG_ALIAS
           rm -f authFile.json
           
       - name: Deploy Source Files (cci - JWT)
-        if: ${{ inputs.SFDX_CLIENT_ID && inputs.CCI_FLOW_NAME }}
+        if: ${{ secrets.SFDX_CLIENT_ID && inputs.CCI_FLOW_NAME }}
         run: |
           if [ -z "$CUMULUSCI_SERVICE_github" ];then
             echo "CUMULUSCI_SERVICE_github input param is required if CCI_FLOW_NAME is set"
@@ -175,14 +175,14 @@ jobs:
           cci flow run $CCI_FLOW_NAME --org $ORG_ALIAS
           
       - name: Deploy Source Files (cci - Auth URL)
-        if: ${{ inputs.SFDX_PACKAGING_ORG_AUTH_JSON && inputs.CCI_FLOW_NAME }}
+        if: ${{ secrets.SFDX_PACKAGING_ORG_AUTH_JSON && inputs.CCI_FLOW_NAME }}
         run: |
           cci org import $ORG_ALIAS $ORG_ALIAS
           echo "** Running 'cci flow run $CCI_FLOW_NAME' ..."
           cci flow run $CCI_FLOW_NAME --org $ORG_ALIAS
           
       - name: Deploy Source Files (sfdx - Auth URL)
-        if: ${{ inputs.SFDX_PACKAGING_ORG_AUTH_JSON && inputs.SFDX_DEPLOY }}
+        if: ${{ secrets.SFDX_PACKAGING_ORG_AUTH_JSON && inputs.SFDX_DEPLOY }}
         run: |
           echo "** Running 'sfdx $SFDX_DEPLOY' ..."
           sfdx $SFDX_DEPLOY -u $ORG_ALIAS
