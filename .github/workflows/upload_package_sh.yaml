@@ -24,7 +24,7 @@ on:
         description: The name of a CumulusCI flow to deploy the source files to the packaging org.
         type: string
       ORG_USERNAME:
-        descripton: The user name to use when authenticating to the packaging org.  Required if SFDX_CLIENT_ID is set.
+        description: The user name to use when authenticating to the packaging org.  Required if SFDX_CLIENT_ID is set.
         type: string
       ORG_NAMESPACE:
         description: The namespace of the packaging org.  Required if UPLOAD_PACKAGE is true.
