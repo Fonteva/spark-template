@@ -116,6 +116,7 @@ jobs:
             cci org import $SCRATCH_ORG_USERNAME $SCRATCH_ORG_ALIAS
           fi
           echo "** Running 'cci flow run $CCI_FLOW_NAME' ..."
+          cci flow run $CCI_FLOW_NAME --org $SCRATCH_ORG_ALIAS
 
       - name: Delete Scratch Org
         if: ${{ github.event.action == 'closed' }}
