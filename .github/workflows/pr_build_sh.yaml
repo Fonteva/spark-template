@@ -71,7 +71,7 @@ jobs:
       - name: NPM Install
         if: ${{ github.event.action != 'closed' && inputs.RUN_NPM_INSTALL && !inputs.DO_NOT_BUILD }}
         run: |
-          npm install
+          npm install --force
           npm install @salesforce/sfdx-lwc-jest --save-dev
 
       - name: Authorize Devhub
@@ -116,18 +116,6 @@ jobs:
             cci org import $SCRATCH_ORG_USERNAME $SCRATCH_ORG_ALIAS
           fi
           echo "** Running 'cci flow run $CCI_FLOW_NAME' ..."
-          cci version
-          cci flow run $CCI_FLOW_NAME --org $SCRATCH_ORG_ALIAS --debug
-          echo "error info..."
-          cci error info
-          echo "printing log..."
-          cat ~/.cumulusci/logs/cci.log
-
-      - name: Print log
-        if: ${{ github.event.action != 'closed' }}
-        run: |
-          echo "error info1..."
-          cci error info
 
       - name: Delete Scratch Org
         if: ${{ github.event.action == 'closed' }}
