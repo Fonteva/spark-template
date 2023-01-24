@@ -185,6 +185,12 @@ jobs:
           echo "** Running 'cci flow run $CCI_FLOW_NAME' ..."
           cci flow run $CCI_FLOW_NAME --org $ORG_ALIAS
           
+      - name: Deploy Source Files (sfdx - JWT)
+        if: ${{ inputs.AUTH_MODE == 'JWT' && inputs.SFDX_DEPLOY }}
+        run: |
+          echo "** Running 'sfdx $SFDX_DEPLOY' ..."
+          sfdx $SFDX_DEPLOY -u $ORG_USERNAME
+          
       - name: Deploy Source Files (sfdx - Auth URL)
         if: ${{ inputs.AUTH_MODE == 'URL' && inputs.SFDX_DEPLOY }}
         run: |
