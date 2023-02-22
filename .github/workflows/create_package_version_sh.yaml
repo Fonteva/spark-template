@@ -286,7 +286,7 @@ jobs:
             echo $result
             status=$(echo $result | jq -r '.result.Status')
             
-            if [ "$status" != "Success"]; then
+            if [ "$status" != "Success" ]; then
               versionId=$(echo $result | jq -r '.result.SubscriberPackageVersionId')
               echo "Package Version ID      : $versionId"
               echo "Package Installation URL: https://login.salesforce.com/packaging/installPackage.apexp?p0=$versionId"
