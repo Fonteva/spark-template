@@ -26,6 +26,7 @@ on:
       PACKAGE_SRC_DIR:
         description: The directory path where the package source files are located (relative to the repository directory).  If not set, the source directory from the sfdx-project.json file is used.
         type: string
+        default: ""
       VERSION_DESCRIPTION:
         description: The description of the package version.  If not set, the version description from the sfdx-project.json file is used.
         type: string
@@ -48,7 +49,7 @@ on:
         default: ""
       WAIT_TIMEOUT:
         description: The number of minutes to wait for the package version to create before timing out.
-        type: int
+        type: number
         default: 60
       API_VERSION:
         description: The API version to use when creating the new package version.  If not set, the API version of the sfdx-package.json file is used.
@@ -103,7 +104,11 @@ on:
       POST_PACKAGE_DETAILS:
         description: If true, post details of the new package version.
         type: boolean
-        default: true
+        default: false
+      DRY_RUN:
+        description: If true, print the sfdx force:package:version:create command, but do not run it.
+        type: boolean
+        default: false
     secrets:
       BUILD_SSH_RSA_KEY:
         description: The RSA private key to use to check out source files.
@@ -148,6 +153,7 @@ jobs:
       CCI_FLOW_NAME: ${{ inputs.CCI_FLOW_NAME }}
       REPO: ${{ inputs.REPO }}
       NO_FONDASH: ${{ inputs.NO_FONDASH }}
+      DRY_RUN: ${{ inputs.DRY_RUN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -273,23 +279,26 @@ jobs:
           
           createArgs="$createArgs -t \"$TAG\""
           
-          echo "** Running 'sfdx force:package:version:create' ..."
-          result=$(sfdx force:package:version:create $createArgs)
+          echo "Running: sfdx force:package:version:create $createArgs"
+
+          if [ "$DRY_RUN" == "false" ]; then
+            result=$(sfdx force:package:version:create $createArgs)
+          fi
           
-          echo $result
+          #echo $result
           
           # TODO: Get package version ID
           # TODO: Check in sfdx-project.json file if it was modified.
           
       - name: Promote Package Version
-        if: ${{ inputs.PROMOTE_PACKAGE_VERSION }}
+        if: ${{ !inputs.DRY_RUN && inputs.PROMOTE_PACKAGE_VERSION }}
         run: |
           echo "** Running 'sfdx force:package:version:promote' ..."
           # TODO: Get package version ID
           # TODO: Run sfdx force:package:version:promote -n -p $VERSION_ID
           
       - name: Post Package Details
-        if: ${{ inputs.POST_PACKAGE_DETAILS }}
+        if: ${{ !inputs.DRY_RUN && inputs.PROMOTE_PACKAGE_VERSION && inputs.POST_PACKAGE_DETAILS }}
         run: |
           if [ -z "$REPO" ];then
             echo "REPO input param is required if POST_PACKAGE_DETAILS is true"
