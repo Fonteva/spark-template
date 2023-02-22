@@ -154,6 +154,7 @@ jobs:
       REPO: ${{ inputs.REPO }}
       NO_FONDASH: ${{ inputs.NO_FONDASH }}
       DRY_RUN: ${{ inputs.DRY_RUN }}
+      DEVHUB_KEY_FILE: devhub.key
     steps:
       - name: Checkout
         uses: actions/checkout@v3
