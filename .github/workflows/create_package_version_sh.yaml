@@ -278,8 +278,6 @@ jobs:
             createArgs="$createArgs --uninstall-script=$UNINSTALL_SCRIPT"
           fi
           
-          createArgs="$createArgs -t \"$TAG\""
-          
           echo "Running: sfdx force:package:version:create $createArgs"
 
           if [ "$DRY_RUN" == "false" ]; then
