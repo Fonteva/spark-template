@@ -284,10 +284,10 @@ jobs:
           if [ "$DRY_RUN" == "false" ]; then
             result=$(sfdx force:package:version:create "${createArgs[@]}")
             echo $result
-            status=$(cat $result | jq -r '.result.Status')
+            status=$(echo $result | jq -r '.result.Status')
             
             if [ "$status" != "Success"]; then
-              versionId=$(cat $result | jq -r '.result.SubscriberPackageVersionId')
+              versionId=$(echo $result | jq -r '.result.SubscriberPackageVersionId')
               echo "Package Version ID      : $versionId"
               echo "Package Installation URL: https://login.salesforce.com/packaging/installPackage.apexp?p0=$versionId"
               echo "VERSION_ID=$versionId" >> $GITHUB_OUTPUT
