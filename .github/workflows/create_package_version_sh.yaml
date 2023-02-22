@@ -210,7 +210,7 @@ jobs:
             TAG="$VERSION_TAG"
           fi
 
-          createArgs=(-p "$PACKAGE_NAME" -t "$TAG" -w $WAIT_TIMEOUT)
+          createArgs=(--json -p "$PACKAGE_NAME" -t "$TAG" -w $WAIT_TIMEOUT)
           
           if [ ! -z "$VERSION_NAME" ];then
             createArgs+=(-a "$VERSION_NAME")
