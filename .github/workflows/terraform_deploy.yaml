@@ -21,7 +21,7 @@ on:
         description: If true, run 'terraform plan'
         type: boolean
         default: true
-      PRE_TF_PLAN_CMD:
+      TF_PLAN_PRE_CMD:
         description: An optional command to run before running 'terraform plan'
         type: string
         default: ""
@@ -33,7 +33,7 @@ on:
         description: If true, run 'terraform apply'
         type: boolean
         default: false
-      PRE_TF_APPLY_CMD:
+      TF_APPLY_PRE_CMD:
         description: An optional command to run before running 'terraform apply'
         type: string
         default: ""
@@ -64,8 +64,6 @@ jobs:
       DEPLOY_DIR: ${{ inputs.DEPLOY_DIR }}
       TF_LOG: ${{ inputs.TF_LOG }}
       TF_LOG_PROVIDER: ${{ inputs.TF_LOG_PROVIDER }}
-      PRE_TF_PLAN_CMD: ${{ inputs.PRE_TF_PLAN_CMD }}
-      PRE_TF_APPLY_CMD: ${{ inputs.PRE_TF_APPLY_CMD }}
     #permissions: write-all
     steps:
       - name: Checkout
@@ -111,11 +109,7 @@ jobs:
         if: ${{ inputs.RUN_TF_PLAN }}
         run:  |
           cd $DEPLOY_DIR
-          
-          if [ ! -z "$PRE_TF_PLAN_CMD" ]; then
-            $PRE_TF_PLAN_CMD
-          fi
-
+          ${{ inputs.TF_PLAN_PRE_CMD }}
           terraform plan -no-color -input=false -var-file=$TF_VAR_FILE
         continue-on-error: true
 
@@ -157,9 +151,5 @@ jobs:
         if: ${{ inputs.RUN_TF_APPLY }}
         run:  |
           cd $DEPLOY_DIR
-          
-          if [ ! -z "$PRE_TF_APPLY_CMD" ]; then
-            $PRE_TF_APPLY_CMD
-          fi
-          
+          ${{ inputs.TF_APPLY_PRE_CMD }}
           terraform apply -auto-approve -input=false -var-file=$TF_VAR_FILE
