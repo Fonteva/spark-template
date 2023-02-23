@@ -40,13 +40,10 @@ on:
     secrets:
       AWS_ACCESS_KEY_ID:
         description: The access key to use when authenticating to AWS
-        type: string
       AWS_SECRET_ACCESS_KEY:
         description: The secret access key to use when authenticating to AWS
-        type: string
       GH_SSH_PRIVATE_KEY:
         description: A private key to use when authenticating to GitHub.  Required if the Terraform file uses modules from a private GitHub repo.
-        type: string
       
 jobs:
   deploy:
