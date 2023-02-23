@@ -52,7 +52,8 @@ on:
         description: The secret access key to use when authenticating to AWS
       GH_SSH_PRIVATE_KEY:
         description: A private key to use when authenticating to GitHub.  Required if the Terraform file uses modules from a private GitHub repo.
-      
+      GH_TOKEN:
+        description: GitHub token to use for authentication in pre-plan and pre-apply scripts.
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -64,7 +65,6 @@ jobs:
       DEPLOY_DIR: ${{ inputs.DEPLOY_DIR }}
       TF_LOG: ${{ inputs.TF_LOG }}
       TF_LOG_PROVIDER: ${{ inputs.TF_LOG_PROVIDER }}
-    #permissions: write-all
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -74,12 +74,11 @@ jobs:
         with:
           terraform_version: 1.3.7
 
-      - name: Terraform Format
+      - name: Check Terraform Format
         id: fmt
         if: ${{ inputs.RUN_TF_FMT }}
-        run: |
-          cd $DEPLOY_DIR
-          terraform fmt -check
+        run: terraform fmt -check
+        working-directory: ${{ inputs.DEPLOY_DIR }}
 
       - name: Terraform Init
         id: init
@@ -94,23 +93,27 @@ jobs:
             ssh-add "$GH_SSH_PRIVATE_KEY_FILE"
             chmod 400 "$GH_SSH_PRIVATE_KEY_FILE"
           fi
+        working-directory: ${{ inputs.DEPLOY_DIR }}
           
-          cd $DEPLOY_DIR
           terraform init ${{ inputs.TF_INIT_ARGS }}
       
       - name: Terraform Validate
         id: validate
-        run: |
-          cd $DEPLOY_DIR
-          terraform validate -no-color
+        run: terraform validate -no-color
+        working-directory: ${{ inputs.DEPLOY_DIR }}
+
+      - name: Terraform Plan (pre)
+        if: ${{ inputs.RUN_TF_PLAN && inputs.TF_PLAN_PRE_CMD }}
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: ${{ inputs.TF_PLAN_PRE_CMD }}
+        working-directory: ${{ inputs.DEPLOY_DIR }}
 
       - name: Terraform Plan
         id: plan
         if: ${{ inputs.RUN_TF_PLAN }}
-        run:  |
-          cd $DEPLOY_DIR
-          ${{ inputs.TF_PLAN_PRE_CMD }}
-          terraform plan -no-color -input=false -var-file=$TF_VAR_FILE
+        run: terraform plan -no-color -input=false -var-file=$TF_VAR_FILE
+        working-directory: ${{ inputs.DEPLOY_DIR }}
         continue-on-error: true
 
       - name: Update Pull Request
@@ -147,9 +150,14 @@ jobs:
         if: ${{ inputs.RUN_TF_PLAN && steps.plan.outcome == 'failure' }}
         run: exit 1
 
+      - name: Terraform Apply (pre)
+        if: ${{ inputs.RUN_TF_APPLY && inputs.TF_APPLY_PRE_CMD }}
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: ${{ inputs.TF_APPLY_PRE_CMD }}
+        working-directory: ${{ inputs.DEPLOY_DIR }}
+          
       - name: Terraform Apply
         if: ${{ inputs.RUN_TF_APPLY }}
-        run:  |
-          cd $DEPLOY_DIR
-          ${{ inputs.TF_APPLY_PRE_CMD }}
-          terraform apply -auto-approve -input=false -var-file=$TF_VAR_FILE
+        run: terraform apply -auto-approve -input=false -var-file=$TF_VAR_FILE
+        working-directory: ${{ inputs.DEPLOY_DIR }}
