@@ -17,6 +17,10 @@ on:
         description: If true, run 'terraform plan'
         type: boolean
         default: true
+      PRE_TF_PLAN_CMD:
+        description: An optional command to run before running 'terraform plan'
+        type: string
+        default: ""
       UPDATE_PR:
         description: If true, update the current PR with details from the 'terraform plan' command.
         type: boolean
@@ -56,6 +60,8 @@ jobs:
       DEPLOY_DIR: ${{ inputs.DEPLOY_DIR }}
       TF_LOG: ${{ inputs.TF_LOG }}
       TF_LOG_PROVIDER: ${{ inputs.TF_LOG_PROVIDER }}
+      PRE_TF_PLAN_CMD: ${{ inputs.PRE_TF_PLAN_CMD }}
+      PRE_TF_APPLY_CMD: ${{ inputs.PRE_TF_APPLY_CMD }}
     #permissions: write-all
     steps:
       - name: Checkout
@@ -101,6 +107,11 @@ jobs:
         if: ${{ inputs.RUN_TF_PLAN }}
         run:  |
           cd $DEPLOY_DIR
+          
+          if [ ! -z "$PRE_TF_PLAN_CMD" ]; then
+            $PRE_TF_PLAN_CMD
+          fi
+
           terraform plan -no-color -input=false -var-file=$TF_VAR_FILE
         continue-on-error: true
 
