@@ -9,6 +9,10 @@ on:
       DEPLOY_DIR:
         description: Directory with the main.tf file to deploy
         type: string
+      TF_INIT_ARGS:
+        description: Arguments for the 'terraform init' command.
+        type: string
+        default: ""
       RUN_TF_FMT:
         description: If true, run 'terraform fmt'
         type: boolean
@@ -94,7 +98,7 @@ jobs:
           fi
           
           cd $DEPLOY_DIR
-          terraform init
+          terraform init ${{ inputs.TF_INIT_ARGS }}
       
       - name: Terraform Validate
         id: validate
