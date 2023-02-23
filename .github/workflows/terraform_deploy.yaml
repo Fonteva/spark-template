@@ -93,9 +93,9 @@ jobs:
             ssh-add "$GH_SSH_PRIVATE_KEY_FILE"
             chmod 400 "$GH_SSH_PRIVATE_KEY_FILE"
           fi
-        working-directory: ${{ inputs.DEPLOY_DIR }}
           
           terraform init ${{ inputs.TF_INIT_ARGS }}
+        working-directory: ${{ inputs.DEPLOY_DIR }}
       
       - name: Terraform Validate
         id: validate
