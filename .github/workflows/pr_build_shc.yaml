@@ -102,6 +102,7 @@ jobs:
       - name: Build
         if: ${{ github.event.action != 'closed' && !inputs.DO_NOT_BUILD }}
         run: |
+          export PATH="/usr/local/lib/nodejs/bin:$PATH:/opt/sfdx/bin"
           ACTIVE_SCRATCH=$(sfdx force:data:soql:query -q "SELECT SignupUsername FROM ScratchOrgInfo where Status='Active' and SignupUsername='$SCRATCH_ORG_USERNAME'" -u $DEVHUB_USERNAME --json)
           COUNT=`echo "$ACTIVE_SCRATCH" | jq -r '.result.totalSize'`
           if [ $COUNT -gt 0 ];then
@@ -133,6 +134,7 @@ jobs:
       - name: Delete Scratch Org
         if: ${{ github.event.action == 'closed' }}
         run: |
+          export PATH="$PATH:/opt/sfdx/bin"
           echo "** Deleting scratch org $SCRATCH_ORG_USERNAME"
           sfdx force:data:record:delete --sobjecttype ActiveScratchOrg --targetusername $DEVHUB_USERNAME --where "SignupUsername='$SCRATCH_ORG_USERNAME'"
           rm -f ~/.sfdx/$SCRATCH_ORG_USERNAME.json
