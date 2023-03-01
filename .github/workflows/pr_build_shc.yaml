@@ -28,7 +28,7 @@ on:
         required: false
         type: boolean
         default: false
-      CONTAINER_USERNAME:
+      CONTAINER_REGISTRY_USERNAME:
         type: string
         required: true
     secrets:
@@ -42,7 +42,7 @@ on:
         required: true
       CUMULUSCI_SERVICE_GITHUB:
         required: true
-      CONTAINER_PASSWORD:
+      CONTAINER_REGISTRY_PASSWORD:
         required: true
 jobs:
   build:
@@ -50,8 +50,8 @@ jobs:
     container:
       image: ghcr.io/fonteva/gh-action-ubuntu-sfdx-cci:latest
       credentials:
-        username: ${{ secrets.CONTAINER_USERNAME }}
-        password: ${{ secrets.CONTAINER_PASSWORD }}
+        username: ${{ secrets.CONTAINER_REGISTRY_USERNAME }}
+        password: ${{ secrets.CONTAINER_REGISTRY_PASSWORD }}
       env:
         DEVHUB_USERNAME: ${{ secrets.DEVHUB_USERNAME }}
         DEVHUB_CLIENTID: ${{ secrets.DEVHUB_CLIENTID }}
