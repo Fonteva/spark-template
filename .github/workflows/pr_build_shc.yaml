@@ -50,7 +50,7 @@ jobs:
     container:
       image: ghcr.io/fonteva/gh-action-ubuntu-sfdx-cci:latest
       credentials:
-        username: ${{ secrets.CONTAINER_REGISTRY_USERNAME }}
+        username: ${{ inputs.CONTAINER_REGISTRY_USERNAME }}
         password: ${{ secrets.CONTAINER_REGISTRY_PASSWORD }}
       env:
         DEVHUB_USERNAME: ${{ secrets.DEVHUB_USERNAME }}
