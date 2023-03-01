@@ -109,6 +109,30 @@ on:
         description: If true, print the sfdx force:package:version:create command, but do not run it.
         type: boolean
         default: false
+      CHECKOUT_APEX_MOCKS:
+        description: If true, check out the ApexMocks repo.
+        type: boolean
+        default: false
+      CHECKOUT_APEX_MOCKS_REF:
+        description: The branch, tag, or SHA to use when checking out the ApexMocks repo.
+        type: string
+        default: "1.0"
+      CHECKOUT_APEX_MOCKS_PATH:
+        description: Where to check out the ApexMocks repo.
+        type: string
+        default: src/ApexMocks
+      CHECKOUT_DAL:
+        description: If true, check out the Data-Access-Library repo.
+        type: boolean
+        default: false
+      CHECKOUT_DAL_REF:
+        description: The branch, tag, or SHA to use when checking out the Data-Access-Library repo.
+        type: string
+        default: "1.8"
+      CHECKOUT_DAL_PATH:
+        description: Where to check out the Data-Access-Library repo.
+        type: string
+        default: src/DAL
     secrets:
       BUILD_SSH_RSA_KEY:
         description: The RSA private key to use to check out source files.
@@ -176,6 +200,24 @@ jobs:
           ssh-key: ${{ secrets.BUILD_SSH_RSA_KEY }}
           repository: Fonteva/ops-scripts
           path: ops-scripts
+
+      - name: Checkout ApexMocks
+        if: ${{ inputs.CHECKOUT_APEX_MOCKS }}
+        uses: actions/checkout@v3
+        with:
+          ssh-key: ${{ secrets.BUILD_SSH_RSA_KEY }}
+          repository: Fonteva/ApexMocks
+          ref: ${{ inputs.CHECKOUT_APEX_MOCKS_REF }}
+          path: ${{ inputs.CHECKOUT_APEX_MOCKS_PATH }}
+
+      - name: Checkout Data-Access-Library
+        if: ${{ inputs.CHECKOUT_DAL }}
+        uses: actions/checkout@v3
+        with:
+          ssh-key: ${{ secrets.BUILD_SSH_RSA_KEY }}
+          repository: Fonteva/ApexMocks
+          ref: ${{ inputs.CHECKOUT_DAL_REF }}
+          path: ${{ inputs.CHECKOUT_DAL_PATH }}
 
       - name: Authorize Devhub
         run: |
