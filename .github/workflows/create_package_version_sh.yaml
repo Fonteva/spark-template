@@ -324,6 +324,7 @@ jobs:
           echo "Running: sfdx force:package:version:create $createArgs"
 
           if [ "$DRY_RUN" == "false" ]; then
+            set +o pipefail +e
             result=$(sfdx force:package:version:create "${createArgs[@]}")
             echo $result
             status=$(echo $result | jq -r '.result.Status')
@@ -335,7 +336,7 @@ jobs:
               echo "VERSION_ID=$versionId" >> $GITHUB_OUTPUT
             else
               echo "ERROR: sfdx force:create:package:version failed"
-              exit -1
+              exit 1
             fi
           fi
           
