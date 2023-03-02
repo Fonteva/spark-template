@@ -215,7 +215,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           ssh-key: ${{ secrets.BUILD_SSH_RSA_KEY }}
-          repository: Fonteva/ApexMocks
+          repository: Fonteva/Data-Access-Library
           ref: ${{ inputs.CHECKOUT_DAL_REF }}
           path: ${{ inputs.CHECKOUT_DAL_PATH }}
 
