@@ -179,6 +179,8 @@ jobs:
       NO_FONDASH: ${{ inputs.NO_FONDASH }}
       DRY_RUN: ${{ inputs.DRY_RUN }}
       DEVHUB_KEY_FILE: devhub.key
+      CHECKOUT_APEX_MOCKS_PATH: ${{ inputs.CHECKOUT_APEX_MOCKS_PATH }}
+      CHECKOUT_DAL_PATH: ${{ inputs.CHECKOUT_DAL_PATH }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -208,7 +210,13 @@ jobs:
           ssh-key: ${{ secrets.BUILD_SSH_RSA_KEY }}
           repository: Fonteva/ApexMocks
           ref: ${{ inputs.CHECKOUT_APEX_MOCKS_REF }}
-          path: ${{ inputs.CHECKOUT_APEX_MOCKS_PATH }}
+          path: tmp/${{ inputs.CHECKOUT_APEX_MOCKS_PATH }}
+
+      - name: Convert ApexMocks Files to sfdx Format
+        if: ${{ inputs.CHECKOUT_APEX_MOCKS }}
+        run: |
+          echo "** Running 'sfdx force:mdapi:convert' ..."
+          sfdx force:mdapi:convert -r "tmp/$CHECKOUT_APEX_MOCKS_PATH" -d "$CHECKOUT_APEX_MOCKS_PATH"
 
       - name: Checkout Data-Access-Library
         if: ${{ inputs.CHECKOUT_DAL }}
@@ -217,7 +225,13 @@ jobs:
           ssh-key: ${{ secrets.BUILD_SSH_RSA_KEY }}
           repository: Fonteva/Data-Access-Library
           ref: ${{ inputs.CHECKOUT_DAL_REF }}
-          path: ${{ inputs.CHECKOUT_DAL_PATH }}
+          path: tmp/${{ inputs.CHECKOUT_DAL_PATH }}
+
+      - name: Convert Data-Access-Library Files to sfdx Format
+        if: ${{ inputs.CHECKOUT_DAL }}
+        run: |
+          echo "** Running 'sfdx force:mdapi:convert' ..."
+          sfdx force:mdapi:convert -r "tmp/$CHECKOUT_DAL_PATH" -d "$CHECKOUT_DAL_PATH"
 
       - name: Authorize Devhub
         run: |
