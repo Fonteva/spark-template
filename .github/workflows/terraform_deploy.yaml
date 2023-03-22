@@ -168,5 +168,5 @@ jobs:
           
       - name: Terraform Show
         if: ${{ inputs.RUN_TF_SHOW }}
-        run: terraform show -var-file=$TF_VAR_FILE
+        run: terraform show
         working-directory: ${{ inputs.DEPLOY_DIR }}
