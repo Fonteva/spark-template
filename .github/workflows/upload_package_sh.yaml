@@ -198,6 +198,7 @@ jobs:
           sfdx $SFDX_DEPLOY -u $ORG_ALIAS
                     
       - name: Upload Package
+        id: upload_package
         if: ${{ inputs.UPLOAD_PACKAGE }}
         run: |
           if [ -z "$REPO" ];then
@@ -272,7 +273,27 @@ jobs:
           
           echo "** Running 'node upload.js' ..."
           node ./upload.js --namespace=$ORG_NAMESPACE --versionname=$VERSION_NAME --tickets=$jiraticket --repo=$REPO --commit=$GIT_COMMIT $uploadArgs
+          
+          if [ -f "version.txt" ]; then
+            version=$(cat version.txt)
+            echo "Version is $version"
+            echo "version=$version" >> "$GITHUB_OUTPUT"
+          fi
+
           popd
+
+      - name: Create Version Tag
+        uses: actions/github-script@v6
+        if: ${{ inputs.UPLOAD_PACKAGE && steps.upload_package.outputs.version }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: 'refs/tags/v${{ steps.upload_package.outputs.version }}',
+              sha: context.sha
+            })
 
   clean:
     if: ${{ always() }}
