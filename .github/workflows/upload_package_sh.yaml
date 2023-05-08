@@ -142,6 +142,7 @@ jobs:
           ssh-key: ${{ secrets.BUILD_SSH_RSA_KEY }}
           repository: Fonteva/ops-scripts
           path: ops-scripts
+          ref: dstelts/tagging
 
       - name: Authenticate to Packaging Org (JWT)
         if: ${{ inputs.AUTH_MODE == 'JWT' }}
