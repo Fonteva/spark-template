@@ -124,163 +124,165 @@ jobs:
           ssh-key: ${{ secrets.BUILD_SSH_RSA_KEY }}
           submodules: true
 
-      - name: Update Build Submodule
-        if: ${{ inputs.UPDATE_BUILD_SUBMODULE }}
-        run: |
-          cd build
-          git checkout master
-          git pull
+      # - name: Update Build Submodule
+      #   if: ${{ inputs.UPDATE_BUILD_SUBMODULE }}
+      #   run: |
+      #     cd build
+      #     git checkout master
+      #     git pull
 
-      - name: Checkout ops-scripts
-        if: ${{ inputs.UPLOAD_PACKAGE }}
-        uses: actions/checkout@v3
-        with:
-          ssh-key: ${{ secrets.BUILD_SSH_RSA_KEY }}
-          repository: Fonteva/ops-scripts
-          path: ops-scripts
+      # - name: Checkout ops-scripts
+      #   if: ${{ inputs.UPLOAD_PACKAGE }}
+      #   uses: actions/checkout@v3
+      #   with:
+      #     ssh-key: ${{ secrets.BUILD_SSH_RSA_KEY }}
+      #     repository: Fonteva/ops-scripts
+      #     path: ops-scripts
 
-      - name: Authenticate to Packaging Org (JWT)
-        if: ${{ inputs.AUTH_MODE == 'JWT' }}
-        run: |
-          if [ -z "$ORG_USERNAME" ];then
-            echo "ORG_USERNAME input param is required if inputs.AUTH_MODE == 'JWT'"
-            exit -1
-          fi
+      # - name: Authenticate to Packaging Org (JWT)
+      #   if: ${{ inputs.AUTH_MODE == 'JWT' }}
+      #   run: |
+      #     if [ -z "$ORG_USERNAME" ];then
+      #       echo "ORG_USERNAME input param is required if inputs.AUTH_MODE == 'JWT'"
+      #       exit -1
+      #     fi
 
-          if [ -z "$SFDX_HUB_KEY" ];then
-            echo "SFDX_HUB_KEY input param is required if inputs.AUTH_MODE == 'JWT'"
-            exit -1
-          fi
+      #     if [ -z "$SFDX_HUB_KEY" ];then
+      #       echo "SFDX_HUB_KEY input param is required if inputs.AUTH_MODE == 'JWT'"
+      #       exit -1
+      #     fi
 
-          echo "$SFDX_HUB_KEY" > ~/$SFDX_KEY_FILE_NAME
-          sfdx auth:jwt:grant --clientid $SFDX_CLIENT_ID --username $ORG_USERNAME --jwtkeyfile ~/$SFDX_KEY_FILE_NAME --instanceurl $PROD_INST_URL
+      #     echo "$SFDX_HUB_KEY" > ~/$SFDX_KEY_FILE_NAME
+      #     sfdx auth:jwt:grant --clientid $SFDX_CLIENT_ID --username $ORG_USERNAME --jwtkeyfile ~/$SFDX_KEY_FILE_NAME --instanceurl $PROD_INST_URL
 
-      - name: Authenticate to Packaging Org (Auth URL)
-        if: ${{ inputs.AUTH_MODE == 'URL' }}
-        run: |
-          echo "$SFDX_PACKAGING_ORG_AUTH_JSON" > authFile.json
-          sfdx auth:sfdxurl:store -f authFile.json -a $ORG_ALIAS
-          rm -f authFile.json
+      # - name: Authenticate to Packaging Org (Auth URL)
+      #   if: ${{ inputs.AUTH_MODE == 'URL' }}
+      #   run: |
+      #     echo "$SFDX_PACKAGING_ORG_AUTH_JSON" > authFile.json
+      #     sfdx auth:sfdxurl:store -f authFile.json -a $ORG_ALIAS
+      #     rm -f authFile.json
           
-      - name: Deploy Source Files (cci - JWT)
-        if: ${{ inputs.AUTH_MODE == 'JWT' && inputs.CCI_FLOW_NAME }}
-        run: |
-          if [ -z "$CUMULUSCI_SERVICE_github" ];then
-            echo "CUMULUSCI_SERVICE_github input param is required if CCI_FLOW_NAME is set"
-            exit -1
-          fi
+      # - name: Deploy Source Files (cci - JWT)
+      #   if: ${{ inputs.AUTH_MODE == 'JWT' && inputs.CCI_FLOW_NAME }}
+      #   run: |
+      #     if [ -z "$CUMULUSCI_SERVICE_github" ];then
+      #       echo "CUMULUSCI_SERVICE_github input param is required if CCI_FLOW_NAME is set"
+      #       exit -1
+      #     fi
 
-          cciOrgVar="CUMULUSCI_ORG_$ORG_ALIAS"
-          echo $cciOrgVar
-          printf -v $cciOrgVar '{"username": "'$ORG_USERNAME'", "instance_url": "'$PROD_INST_URL'"}'
-          export $cciOrgVar
-          echo ${!cciOrgVar}
-          echo "** Running 'cci flow run $CCI_FLOW_NAME' ..."
-          cci flow run $CCI_FLOW_NAME --org $ORG_ALIAS
+      #     cciOrgVar="CUMULUSCI_ORG_$ORG_ALIAS"
+      #     echo $cciOrgVar
+      #     printf -v $cciOrgVar '{"username": "'$ORG_USERNAME'", "instance_url": "'$PROD_INST_URL'"}'
+      #     export $cciOrgVar
+      #     echo ${!cciOrgVar}
+      #     echo "** Running 'cci flow run $CCI_FLOW_NAME' ..."
+      #     cci flow run $CCI_FLOW_NAME --org $ORG_ALIAS
           
-      - name: Deploy Source Files (cci - Auth URL)
-        if: ${{ inputs.AUTH_MODE == 'URL' && inputs.CCI_FLOW_NAME }}
-        run: |
-          cci org import $ORG_ALIAS $ORG_ALIAS
-          echo "** Running 'cci flow run $CCI_FLOW_NAME' ..."
-          cci flow run $CCI_FLOW_NAME --org $ORG_ALIAS
+      # - name: Deploy Source Files (cci - Auth URL)
+      #   if: ${{ inputs.AUTH_MODE == 'URL' && inputs.CCI_FLOW_NAME }}
+      #   run: |
+      #     cci org import $ORG_ALIAS $ORG_ALIAS
+      #     echo "** Running 'cci flow run $CCI_FLOW_NAME' ..."
+      #     cci flow run $CCI_FLOW_NAME --org $ORG_ALIAS
           
-      - name: Deploy Source Files (sfdx - JWT)
-        if: ${{ inputs.AUTH_MODE == 'JWT' && inputs.SFDX_DEPLOY }}
-        run: |
-          echo "** Running 'sfdx $SFDX_DEPLOY' ..."
-          sfdx $SFDX_DEPLOY -u $ORG_USERNAME
+      # - name: Deploy Source Files (sfdx - JWT)
+      #   if: ${{ inputs.AUTH_MODE == 'JWT' && inputs.SFDX_DEPLOY }}
+      #   run: |
+      #     echo "** Running 'sfdx $SFDX_DEPLOY' ..."
+      #     sfdx $SFDX_DEPLOY -u $ORG_USERNAME
           
-      - name: Deploy Source Files (sfdx - Auth URL)
-        if: ${{ inputs.AUTH_MODE == 'URL' && inputs.SFDX_DEPLOY }}
-        run: |
-          echo "** Running 'sfdx $SFDX_DEPLOY' ..."
-          sfdx $SFDX_DEPLOY -u $ORG_ALIAS
+      # - name: Deploy Source Files (sfdx - Auth URL)
+      #   if: ${{ inputs.AUTH_MODE == 'URL' && inputs.SFDX_DEPLOY }}
+      #   run: |
+      #     echo "** Running 'sfdx $SFDX_DEPLOY' ..."
+      #     sfdx $SFDX_DEPLOY -u $ORG_ALIAS
                     
       - name: Upload Package
         id: upload_package
         if: ${{ inputs.UPLOAD_PACKAGE }}
         run: |
-          if [ -z "$REPO" ];then
-            echo "REPO input param is required if UPLOAD_PACKAGE is true"
-            exit -1
-          fi
+          # if [ -z "$REPO" ];then
+          #   echo "REPO input param is required if UPLOAD_PACKAGE is true"
+          #   exit -1
+          # fi
 
-          if [ -z "$ORG_NAMESPACE" ];then
-            echo "ORG_NAMESPACE input param is required if UPLOAD_PACKAGE is true"
-            exit -1
-          fi
+          # if [ -z "$ORG_NAMESPACE" ];then
+          #   echo "ORG_NAMESPACE input param is required if UPLOAD_PACKAGE is true"
+          #   exit -1
+          # fi
 
-          if [ -z "$VERSION_NAME" ];then
-            echo "VERSION_NAME input param is required if UPLOAD_PACKAGE is true"
-            exit -1
-          fi
+          # if [ -z "$VERSION_NAME" ];then
+          #   echo "VERSION_NAME input param is required if UPLOAD_PACKAGE is true"
+          #   exit -1
+          # fi
 
-          GIT_COMMIT=$(git rev-parse HEAD)
-          echo "** Commit = $GIT_COMMIT"
+          # GIT_COMMIT=$(git rev-parse HEAD)
+          # echo "** Commit = $GIT_COMMIT"
           
-          echo "** Getting Jira tickets ..."
-          git log --first-parent --oneline --since="24 hours ago" > test.txt
-          sed -i -e 's/[[:blank:]]/-/g' test.txt
-          jiraticket=`grep -P -o "(?i)PD-[0-9]{1,}" test.txt | tr '\n' ',' | tr [a-z] [A-Z]`
-          if [ -z "$jiraticket" ];then
-            echo "** No Jira ticket found"
-            jiraticket="NoTickets"
-          else
-            echo "jiraticket = $jiraticket"
-          fi;
+          # echo "** Getting Jira tickets ..."
+          # git log --first-parent --oneline --since="24 hours ago" > test.txt
+          # sed -i -e 's/[[:blank:]]/-/g' test.txt
+          # jiraticket=`grep -P -o "(?i)PD-[0-9]{1,}" test.txt | tr '\n' ',' | tr [a-z] [A-Z]`
+          # if [ -z "$jiraticket" ];then
+          #   echo "** No Jira ticket found"
+          #   jiraticket="NoTickets"
+          # else
+          #   echo "jiraticket = $jiraticket"
+          # fi;
           
-          echo "** Running 'npm install' ..."
-          pushd ./ops-scripts/uploads-scripts/github
-          npm install
+          # echo "** Running 'npm install' ..."
+          # pushd ./ops-scripts/uploads-scripts/github
+          # npm install
           
-          uploadArgs=""
+          # uploadArgs=""
           
-          if [ "$NO_FONDASH" == "true" ]; then
-            uploadArgs="--nofondash"
-          else
-            uploadArgs=""
-          fi
+          # if [ "$NO_FONDASH" == "true" ]; then
+          #   uploadArgs="--nofondash"
+          # else
+          #   uploadArgs=""
+          # fi
           
-          if [ "$IS_PATCH" == "true" ]; then
-            uploadArgs="$uploadArgs --ispatch --major=$VERSION_NUM_MAJOR --minor=$VERSION_NUM_MINOR"
-          fi
+          # if [ "$IS_PATCH" == "true" ]; then
+          #   uploadArgs="$uploadArgs --ispatch --major=$VERSION_NUM_MAJOR --minor=$VERSION_NUM_MINOR"
+          # fi
           
-          if [ "$AWS_SECRET_ID" ]; then
-            uploadArgs="$uploadArgs --secretid=$AWS_SECRET_ID"
+          # if [ "$AWS_SECRET_ID" ]; then
+          #   uploadArgs="$uploadArgs --secretid=$AWS_SECRET_ID"
             
-            if [ "$AWS_USERNAME_SECRET" ]; then
-              uploadArgs="$uploadArgs --usernamesecret=$AWS_USERNAME_SECRET"
-            fi
+          #   if [ "$AWS_USERNAME_SECRET" ]; then
+          #     uploadArgs="$uploadArgs --usernamesecret=$AWS_USERNAME_SECRET"
+          #   fi
           
-            if [ "$AWS_PASSWORD_SECRET" ]; then
-              uploadArgs="$uploadArgs --passwordsecret=$AWS_PASSWORD_SECRET"
-            fi
-          elif [ "$ORG_PASSWORD" ]; then
-            uploadArgs="$uploadArgs --username=$ORG_USERNAME --password=$ORG_PASSWORD"
-          else
-            if [ -z "$ORG_USERNAME" ]; then
-              export ORG_USERNAME=$ORG_ALIAS
-            fi
+          #   if [ "$AWS_PASSWORD_SECRET" ]; then
+          #     uploadArgs="$uploadArgs --passwordsecret=$AWS_PASSWORD_SECRET"
+          #   fi
+          # elif [ "$ORG_PASSWORD" ]; then
+          #   uploadArgs="$uploadArgs --username=$ORG_USERNAME --password=$ORG_PASSWORD"
+          # else
+          #   if [ -z "$ORG_USERNAME" ]; then
+          #     export ORG_USERNAME=$ORG_ALIAS
+          #   fi
 
-            orgInfo=$(sfdx force:org:display -u $ORG_USERNAME --json)
-            accessToken=$(echo $orgInfo | jq -r .result.accessToken)
-            instanceUrl=$(echo $orgInfo | jq -r .result.instanceUrl)
-            uploadArgs="$uploadArgs --accesstoken=$accessToken --instanceurl=$instanceUrl"
-          fi
+          #   orgInfo=$(sfdx force:org:display -u $ORG_USERNAME --json)
+          #   accessToken=$(echo $orgInfo | jq -r .result.accessToken)
+          #   instanceUrl=$(echo $orgInfo | jq -r .result.instanceUrl)
+          #   uploadArgs="$uploadArgs --accesstoken=$accessToken --instanceurl=$instanceUrl"
+          # fi
           
-          echo "uploadArgs = $uploadArgs"
+          # echo "uploadArgs = $uploadArgs"
           
-          echo "** Running 'node upload.js' ..."
-          node ./upload.js --namespace=$ORG_NAMESPACE --versionname=$VERSION_NAME --tickets=$jiraticket --repo=$REPO --commit=$GIT_COMMIT $uploadArgs
+          # echo "** Running 'node upload.js' ..."
+          # node ./upload.js --namespace=$ORG_NAMESPACE --versionname=$VERSION_NAME --tickets=$jiraticket --repo=$REPO --commit=$GIT_COMMIT $uploadArgs
           
+          echo "0.0.test" > version.txt
+
           if [ -f "version.txt" ]; then
             version=$(cat version.txt)
             echo "Version is $version"
             echo "version=$version" >> "$GITHUB_OUTPUT"
           fi
 
-          popd
+          # popd
 
       - name: Create Version Tag
         uses: actions/github-script@v6
