@@ -4,6 +4,7 @@ env:
   SFDX_USE_GENERIC_UNIX_KEYCHAIN: "true"
   PROD_INST_URL: "https://login.salesforce.com"
   TEST_INST_URL: "https://test.salesforce.com"
+  SFDX_PATH: /opt/sfdx/bin
 
 on:
   workflow_call:
@@ -53,7 +54,7 @@ jobs:
       SCRATCH_ORG_USERNAME: ${{ inputs.SCRATCH_ORG_USERNAME }}
       SCRATCH_ORG_ALIAS: ${{ inputs.SCRATCH_ORG_ALIAS }}
       DEVHUB_KEY_FILE: devhub.key
-      SFDX: /opt/sfdx/bin/sfdx
+      SFDX: ${{ env.SFDX_PATH }}/sfdx
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -88,13 +89,15 @@ jobs:
       - name: Build
         if: ${{ github.event.action != 'closed' && !inputs.DO_NOT_BUILD }}
         run: |
-          ACTIVE_SCRATCH=$($SFDX force:data:soql:query -q "SELECT SignupUsername FROM ScratchOrgInfo where Status='Active' and SignupUsername='$SCRATCH_ORG_USERNAME'" -u $DEVHUB_USERNAME --json)
+          PATH="$PATH:$SFDX_PATH"
+          export PATH
+          ACTIVE_SCRATCH=$(sfdx force:data:soql:query -q "SELECT SignupUsername FROM ScratchOrgInfo where Status='Active' and SignupUsername='$SCRATCH_ORG_USERNAME'" -u $DEVHUB_USERNAME --json)
           COUNT=`echo "$ACTIVE_SCRATCH" | jq -r '.result.totalSize'`
           if [ $COUNT -gt 0 ];then
             echo "** Using existing scratch org"
             echo "** Running 'sfdx auth:jwt:grant' ..."
-            $SFDX auth:jwt:grant --clientid $DEVHUB_CLIENTID --username $SCRATCH_ORG_USERNAME --jwtkeyfile ~/$DEVHUB_KEY_FILE --instanceurl $TEST_INST_URL
-            $SFDX force:user:display -u $SCRATCH_ORG_USERNAME
+            sfdx auth:jwt:grant --clientid $DEVHUB_CLIENTID --username $SCRATCH_ORG_USERNAME --jwtkeyfile ~/$DEVHUB_KEY_FILE --instanceurl $TEST_INST_URL
+            sfdx force:user:display -u $SCRATCH_ORG_USERNAME
             cciOrgVar="CUMULUSCI_ORG_$SCRATCH_ORG_ALIAS"
             echo $cciOrgVar
             printf -v $cciOrgVar '{"username": "'$SCRATCH_ORG_USERNAME'", "instance_url": "'$TEST_INST_URL'"}'
@@ -105,12 +108,12 @@ jobs:
           else
             echo "** Creating new scratch org"
             echo "** Running 'sfdx force:org:create' ..."
-            $SFDX force:org:create -f $SCRATCH_ORG_JSON username=$SCRATCH_ORG_USERNAME -d 30
+            sfdx force:org:create -f $SCRATCH_ORG_JSON username=$SCRATCH_ORG_USERNAME -d 30
             echo "** Running 'sfdx force:config:set' ..."
-            $SFDX force:config:set defaultdevhubusername=$DEVHUB_USERNAME
+            sfdx force:config:set defaultdevhubusername=$DEVHUB_USERNAME
             echo "** Running 'sfdx force:user:password:generate' ..."
-            $SFDX force:user:password:generate -u $SCRATCH_ORG_USERNAME
-            $SFDX force:user:display -u $SCRATCH_ORG_USERNAME
+            sfdx force:user:password:generate -u $SCRATCH_ORG_USERNAME
+            sfdx force:user:display -u $SCRATCH_ORG_USERNAME
             cci org import $SCRATCH_ORG_USERNAME $SCRATCH_ORG_ALIAS
           fi
           echo "** Running 'cci flow run $CCI_FLOW_NAME' ..."
