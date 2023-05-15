@@ -52,6 +52,7 @@ jobs:
       CCI_FLOW_NAME: ${{ inputs.CCI_FLOW_NAME }}
       SCRATCH_ORG_USERNAME: ${{ inputs.SCRATCH_ORG_USERNAME }}
       SCRATCH_ORG_ALIAS: ${{ inputs.SCRATCH_ORG_ALIAS }}
+      SFDX_CLIENT_ID: ${{ secrets.DEVHUB_CLIENTID }}
       DEVHUB_KEY_FILE: devhub.key
       SFDX_PATH: /opt/sfdx/bin
       SFDX: /opt/sfdx/bin/sfdx
