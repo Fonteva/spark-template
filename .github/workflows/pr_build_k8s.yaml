@@ -4,7 +4,6 @@ env:
   SFDX_USE_GENERIC_UNIX_KEYCHAIN: "true"
   PROD_INST_URL: "https://login.salesforce.com"
   TEST_INST_URL: "https://test.salesforce.com"
-  SFDX_PATH: /opt/sfdx/bin
 
 on:
   workflow_call:
@@ -54,7 +53,8 @@ jobs:
       SCRATCH_ORG_USERNAME: ${{ inputs.SCRATCH_ORG_USERNAME }}
       SCRATCH_ORG_ALIAS: ${{ inputs.SCRATCH_ORG_ALIAS }}
       DEVHUB_KEY_FILE: devhub.key
-      SFDX: ${{ env.SFDX_PATH }}/sfdx
+      SFDX_PATH: /opt/sfdx/bin
+      SFDX: /opt/sfdx/bin/sfdx
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -77,13 +77,15 @@ jobs:
 
       - name: Authorize Devhub
         run: |
+          PATH="$PATH:$SFDX_PATH"
+          export PATH
           echo "$DEVHUB_KEY" | base64 -d > ~/$DEVHUB_KEY_FILE
           echo "** Running 'sfdx auth:jwt:grant' ..."
-          $SFDX auth:jwt:grant --clientid $DEVHUB_CLIENTID --username $DEVHUB_USERNAME --jwtkeyfile ~/$DEVHUB_KEY_FILE --setdefaultdevhubusername --instanceurl $PROD_INST_URL
-          v=$($SFDX config:get defaultdevhubusername --json | jq -r '.result[0].value')
+          sfdx auth:jwt:grant --clientid $DEVHUB_CLIENTID --username $DEVHUB_USERNAME --jwtkeyfile ~/$DEVHUB_KEY_FILE --setdefaultdevhubusername --instanceurl $PROD_INST_URL
+          v=$(sfdx config:get defaultdevhubusername --json | jq -r '.result[0].value')
           if [ "$v" = "null" ]; then
             echo "** Running 'sfdx force:config:set' ..."
-            $SFDX force:config:set defaultdevhubusername=$DEVHUB_USERNAME
+            sfdx force:config:set defaultdevhubusername=$DEVHUB_USERNAME
           fi
 
       - name: Build
@@ -122,7 +124,9 @@ jobs:
       - name: Delete Scratch Org
         if: ${{ github.event.action == 'closed' }}
         run: |
+          PATH="$PATH:$SFDX_PATH"
+          export PATH
           echo "** Deleting scratch org $SCRATCH_ORG_USERNAME"
-          $SFDX force:data:record:delete --sobjecttype ActiveScratchOrg --targetusername $DEVHUB_USERNAME --where "SignupUsername='$SCRATCH_ORG_USERNAME'"
+          sfdx force:data:record:delete --sobjecttype ActiveScratchOrg --targetusername $DEVHUB_USERNAME --where "SignupUsername='$SCRATCH_ORG_USERNAME'"
           rm -f ~/.sfdx/$SCRATCH_ORG_USERNAME.json
           rm -f ~/.cumulusci/*/$SCRATCH_ORG_ALIAS.org
