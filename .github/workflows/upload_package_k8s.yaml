@@ -46,8 +46,12 @@ on:
       VERSION_NUM_MINOR:
         description: The minor version number of the patch.  Required if IS_PATCH is true.
         type: string
-      NO_FONDASH:
-        description: If true, do not post the new package version details to Fondash.
+      SKIP_FONDASH:
+        description: If true, don't publish the new package version details to Fondash.
+        type: boolean
+        default: false
+      SKIP_PUBLISH:
+        description: If true, don't publish the new package details to Teams, Marketplace, or Fondash.
         type: boolean
         default: false
       UPDATE_BUILD_SUBMODULE:
@@ -119,10 +123,11 @@ jobs:
       IS_PATCH: ${{ inputs.IS_PATCH }}
       VERSION_NUM_MAJOR: ${{ inputs.VERSION_NUM_MAJOR }}
       VERSION_NUM_MINOR: ${{ inputs.VERSION_NUM_MINOR }}
-      NO_FONDASH: ${{ inputs.NO_FONDASH }}
       SFDX_DEPLOY: ${{ inputs.SFDX_DEPLOY }}
       SFDX_PATH: /opt/sfdx/bin
       SFDX: /opt/sfdx/bin/sfdx
+      SKIP_FONDASH: ${{ inputs.SKIP_FONDASH }}
+      SKIP_PUBLISH: ${{ inputs.SKIP_PUBLISH }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -245,10 +250,14 @@ jobs:
           
           uploadArgs=""
           
-          if [ "$NO_FONDASH" == "true" ]; then
-            uploadArgs="--nofondash"
+          if [ "$SKIP_FONDASH" == "true" ]; then
+            uploadArgs="--skip-fondash"
           else
             uploadArgs=""
+          fi
+          
+          if [ "$SKIP_PUBLISH" == "true" ]; then
+            uploadArgs="$uploadArgs --skip-publish"
           fi
           
           if [ "$IS_PATCH" == "true" ]; then
