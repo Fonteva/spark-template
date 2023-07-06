@@ -354,7 +354,7 @@ jobs:
             createArgs+=(--uninstall-script="$UNINSTALL_SCRIPT")
           fi
           
-          echo "Running: sfdx force:package:version:create $createArgs"
+          echo "Running: sfdx force:package:version:create ${createArgs[@]}"
 
           if [ "$DRY_RUN" == "false" ]; then
             set +o pipefail +e
