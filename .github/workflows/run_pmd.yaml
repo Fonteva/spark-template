@@ -9,6 +9,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - uses: Checkout Spark Template
+        with:
+          token: ${{ secrets.GH_PAT }}
+          path: spark-template
       - uses: actions/setup-java@v3
         with:
           distribution: "temurin"
@@ -17,7 +21,7 @@ jobs:
         id: pmd
         with:
           version: "6.55.0"
-          rulesets: "./pmd/rulesets/quickstart.xml"
+          rulesets: "./spark-template/pmd/rulesets/quickstart.xml"
           analyzeModifiedFilesOnly: true
       - name: Fail build if there are violations
         if: steps.pmd.outputs.violations != 0
