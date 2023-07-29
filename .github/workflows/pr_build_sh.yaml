@@ -71,8 +71,9 @@ jobs:
       - name: NPM Install
         if: ${{ github.event.action != 'closed' && inputs.RUN_NPM_INSTALL && !inputs.DO_NOT_BUILD }}
         run: |
-          npm install
-          npm install @salesforce/sfdx-lwc-jest --save-dev
+          npm install --force
+          npm install @salesforce/sfdx-lwc-jest --save-dev --force
+          npm audit fix --force
 
       - name: Authorize Devhub
         run: |
