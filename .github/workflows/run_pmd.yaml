@@ -4,8 +4,16 @@ on:
   workflow_call:
 
 jobs:
-  build:
+  pmd:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - uses: Checkout Spark Template
+        with:
+          token: ${{ secrets.GH_PAT }}
+          path: spark-template
+      - uses: actions/setup-java@v3
+        with:
+          distribution: "temurin"
+          java-version: "11"
 
