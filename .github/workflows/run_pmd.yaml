@@ -11,7 +11,6 @@ jobs:
       - name: Checkout Spark Template
         uses: actions/checkout@v3
         with:
-          token: ${{ secrets.GH_PAT }}
           path: spark-template
       - uses: actions/setup-java@v3
         with:
