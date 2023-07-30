@@ -11,6 +11,8 @@ jobs:
       - name: Checkout Spark Template
         uses: actions/checkout@v3
         with:
+          repository: Fonteva/spark-template
+          ref: with_pmd
           path: spark-template
       - uses: actions/setup-java@v3
         with:
