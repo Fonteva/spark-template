@@ -171,18 +171,18 @@
          <property name="cc_block_highlighting" value="false" />
       </properties>
    </rule>
-   <rule
-    ref="category/apex/bestpractices.xml/AvoidGlobalModifier"
-    message="Avoid using global modifier"
-  >
-      <priority>3</priority>
-      <properties>
-         <!-- relevant for Code Climate output only -->
-         <property name="cc_categories" value="Style" />
-         <property name="cc_remediation_points_multiplier" value="100" />
-         <property name="cc_block_highlighting" value="false" />
-      </properties>
-   </rule>
+<!--   <rule-->
+<!--    ref="category/apex/bestpractices.xml/AvoidGlobalModifier"-->
+<!--    message="Avoid using global modifier"-->
+<!--  >-->
+<!--      <priority>3</priority>-->
+<!--      <properties>-->
+<!--         &lt;!&ndash; relevant for Code Climate output only &ndash;&gt;-->
+<!--         <property name="cc_categories" value="Style" />-->
+<!--         <property name="cc_remediation_points_multiplier" value="100" />-->
+<!--         <property name="cc_block_highlighting" value="false" />-->
+<!--      </properties>-->
+<!--   </rule>-->
    <rule ref="category/apex/errorprone.xml/AvoidNonExistentAnnotations">
       <properties>
          <!-- relevant for Code Climate output only -->
@@ -564,6 +564,7 @@
 <!--  >-->
 <!--      <priority>3</priority>-->
 <!--      <properties>-->
+<!--         &lt;!&ndash; relevant for Code Climate output only &ndash;&gt;-->
 <!--         &lt;!&ndash; relevant for Code Climate output only &ndash;&gt;-->
 <!--         <property name="cc_categories" value="Style" />-->
 <!--         <property name="cc_remediation_points_multiplier" value="50" />-->
