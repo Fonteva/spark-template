@@ -558,18 +558,18 @@
    <!-- <rule ref="category/apex/codestyle.xml/FieldDeclarationsShouldBeAtStart"/> -->
 
    <!-- DOCUMENTATION -->
-   <rule
-    ref="category/apex/documentation.xml/ApexDoc"
-    message="Document classes, methods, and properties that are public or global."
-  >
-      <priority>3</priority>
-      <properties>
-         <!-- relevant for Code Climate output only -->
-         <property name="cc_categories" value="Style" />
-         <property name="cc_remediation_points_multiplier" value="50" />
-         <property name="cc_block_highlighting" value="false" />
-      </properties>
-   </rule>
+<!--   <rule-->
+<!--    ref="category/apex/documentation.xml/ApexDoc"-->
+<!--    message="Document classes, methods, and properties that are public or global."-->
+<!--  >-->
+<!--      <priority>3</priority>-->
+<!--      <properties>-->
+<!--         &lt;!&ndash; relevant for Code Climate output only &ndash;&gt;-->
+<!--         <property name="cc_categories" value="Style" />-->
+<!--         <property name="cc_remediation_points_multiplier" value="50" />-->
+<!--         <property name="cc_block_highlighting" value="false" />-->
+<!--      </properties>-->
+<!--   </rule>-->
 
    <!-- CLARITY / BEST PRACTICES -->
    <rule ref="category/apex/bestpractices.xml/DebugsShouldUseLoggingLevel">
