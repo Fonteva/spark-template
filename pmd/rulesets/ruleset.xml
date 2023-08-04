@@ -79,9 +79,11 @@ Note: This ruleset is deprecated. Use "rulesets/apex/quickstart.xml" instead.
     deprecated="true"
   />
    <rule
-    ref="rulesets/apex/quickstart.xml/MethodNamingConventions"
-    deprecated="true"
-  />
+    ref="rulesets/apex/quickstart.xml/MethodNamingConventions" deprecated="true">
+		<properties>
+			<property name="skipTestMethodUnderscores" value="true" />
+		</properties>
+	</rule>
    <rule
     ref="rulesets/apex/quickstart.xml/MethodWithSameNameAsEnclosingClass"
     deprecated="true"
