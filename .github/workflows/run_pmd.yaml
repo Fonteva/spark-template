@@ -1,0 +1,29 @@
+name: Run PMD
+
+on:
+  workflow_call:
+
+jobs:
+  pmd:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Checkout Spark Template
+        uses: actions/checkout@v3
+        with:
+          repository: Fonteva/spark-template
+          ref: with_pmd
+          path: spark-template
+      - uses: actions/setup-java@v3
+        with:
+          distribution: "temurin"
+          java-version: "11"
+      - uses: pmd/pmd-github-action@v1
+        id: pmd
+        with:
+          version: "6.55.0"
+          rulesets: "./spark-template/pmd/rulesets/quickstart.xml"
+          analyzeModifiedFilesOnly: true
+      - name: Fail build if there are violations
+        if: steps.pmd.outputs.violations != 0
+        run: exit 1
