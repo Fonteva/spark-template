@@ -50,6 +50,10 @@ on:
         description: If true, don't publish the new package version details to Fondash.
         type: boolean
         default: false
+      SKIP_MARKETPLACE:
+        description: If true, don't publish the new package version details to Marketplace.
+        type: boolean
+        default: false
       SKIP_PUBLISH:
         description: If true, don't publish the new package details to Teams, Marketplace, or Fondash.
         type: boolean
@@ -127,6 +131,7 @@ jobs:
       SFDX_PATH: /opt/sfdx/bin
       SFDX: /opt/sfdx/bin/sfdx
       SKIP_FONDASH: ${{ inputs.SKIP_FONDASH }}
+      SKIP_MARKETPLACE: ${{ inputs.SKIP_MARKETPLACE }}
       SKIP_PUBLISH: ${{ inputs.SKIP_PUBLISH }}
     steps:
       - name: Checkout
@@ -251,9 +256,11 @@ jobs:
           uploadArgs=""
           
           if [ "$SKIP_FONDASH" == "true" ]; then
-            uploadArgs="--skip-fondash"
-          else
-            uploadArgs=""
+            uploadArgs="$uploadArgs --skip-fondash"
+          fi
+          
+          if [ "$SKIP_MARKETPLACE" == "true" ]; then
+            uploadArgs="$uploadArgs --skip-marketplace"
           fi
           
           if [ "$SKIP_PUBLISH" == "true" ]; then
