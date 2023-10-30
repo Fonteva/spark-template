@@ -172,8 +172,7 @@ jobs:
           
       - name: Terraform Destroy
         if: ${{ inputs.RUN_TF_DESTROY }}
-        #run: terraform destroy -auto-approve -input=false -var-file=$TF_VAR_FILE
-        run: echo "Running 'terraform destroy -auto-approve -input=false -var-file=$TF_VAR_FILE'""
+        run: terraform destroy -auto-approve -input=false -var-file=$TF_VAR_FILE
         working-directory: ${{ inputs.DEPLOY_DIR }}
           
       - name: Terraform Show
