@@ -37,6 +37,10 @@ on:
         description: An optional command to run before running 'terraform apply'
         type: string
         default: ""
+      RUN_TF_DESTROY:
+        description: If true, run 'terraform destroy'
+        type: boolean
+        default: false
       RUN_TF_SHOW:
         description: If true, run 'terraform show'
         type: boolean
@@ -116,7 +120,7 @@ jobs:
       - name: Terraform Plan
         id: plan
         if: ${{ inputs.RUN_TF_PLAN }}
-        run: terraform plan -no-color -input=false -var-file=$TF_VAR_FILE
+        run: terraform plan -no-color -input=false -var-file=$TF_VAR_FILE ${{ inputs.RUN_TF_DESTROY && '-destroy' || '' }}
         working-directory: ${{ inputs.DEPLOY_DIR }}
         continue-on-error: true
 
@@ -164,6 +168,12 @@ jobs:
       - name: Terraform Apply
         if: ${{ inputs.RUN_TF_APPLY }}
         run: terraform apply -auto-approve -input=false -var-file=$TF_VAR_FILE
+        working-directory: ${{ inputs.DEPLOY_DIR }}
+          
+      - name: Terraform Destroy
+        if: ${{ inputs.RUN_TF_DESTROY }}
+        #run: terraform destroy -auto-approve -input=false -var-file=$TF_VAR_FILE
+        run: echo "Running 'terraform destroy -auto-approve -input=false -var-file=$TF_VAR_FILE'""
         working-directory: ${{ inputs.DEPLOY_DIR }}
           
       - name: Terraform Show
