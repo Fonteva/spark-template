@@ -98,7 +98,7 @@ jobs:
           if [ $COUNT -gt 0 ];then
             echo "** Using existing scratch org"
             echo "** Running 'sfdx auth:jwt:grant' ..."
-            sfdx auth:jwt:grant --clientid $DEVHUB_CLIENTID --username $SCRATCH_ORG_USERNAME --jwtkeyfile ~/$DEVHUB_KEY_FILE --instanceurl $TEST_INST_URL
+            sfdx force:auth:jwt:grant --clientid $DEVHUB_CLIENTID --username $SCRATCH_ORG_USERNAME --jwtkeyfile ~/$DEVHUB_KEY_FILE --instanceurl $TEST_INST_URL
             sfdx force:user:display -u $SCRATCH_ORG_USERNAME
             cciOrgVar="CUMULUSCI_ORG_$SCRATCH_ORG_ALIAS"
             echo $cciOrgVar
