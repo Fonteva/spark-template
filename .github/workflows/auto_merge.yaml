@@ -3,6 +3,10 @@ name: Auto Merge
 on:
   workflow_call:
     inputs:
+      source_branch:
+        description: 'Source branch'
+        required: true
+        type: string
       source_pathspec:
         description: 'Source pathspec'
         required: true
@@ -49,7 +53,7 @@ jobs:
       GH_TOKEN: ${{ secrets.gh_token }}
       GIT_COMMAND: ${{ inputs.git_command }}
       MERGE_CONFLICT_RESOLUTION: ${{ inputs.merge_conflict_resolution }}
-      SOURCE_BRANCH: ${{ github.ref_name }}
+      SOURCE_BRANCH: ${{ inputs.source_branch }}
       SOURCE_PATHSPEC: ${{ inputs.source_pathspec }}
       SOURCE_REF: ${{ inputs.source_ref }}
     steps:
@@ -57,10 +61,10 @@ jobs:
         run: |
           IFS=' ' read -r -a allowed_branches <<< "$ALLOWED_BRANCHES"
 
-          if [[ $(echo ${allowed_branches[@]} | fgrep -w "${{ github.ref_name }}") ]]; then
-            echo "This workflow is allowed to run on the ${{ github.ref_name }} branch"
+          if [[ $(echo ${allowed_branches[@]} | fgrep -w "$SOURCE_BRANCH") ]]; then
+            echo "This workflow is allowed to run on the $SOURCE_BRANCH branch"
           else
-            echo "This workflow is not allowed to run on the ${{ github.ref_name }} branch"
+            echo "This workflow is not allowed to run on the $SOURCE_BRANCH branch"
             exit 1
           fi
 
