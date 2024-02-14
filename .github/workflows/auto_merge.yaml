@@ -42,6 +42,7 @@ on:
     secrets:
       gh_token:
         description: Token to use for authentication to GitHub.
+        required: true
 
 jobs:
   create_pr:
@@ -235,4 +236,4 @@ jobs:
           pr_body=$(printf "%s\n" "${commit_msg}" "${logs[@]}")
           echo "PR title: ${pr_title}"
           echo -e "PR body:\n${pr_body}"
-            gh pr create --base $DEST_BRANCH --title "${pr_title}" --body "${pr_body}"
+          gh pr create --base $DEST_BRANCH --title "${pr_title}" --body "${pr_body}"
