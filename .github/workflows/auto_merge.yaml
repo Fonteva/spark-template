@@ -120,7 +120,7 @@ jobs:
 
           handle_git_error() {
             if [ "$MERGE_CONFLICT_RESOLUTION" = "none" ]; then
-              mapfile -t conflicts < <(git status -s | grep -e '^(UU|AA) ' | sed 's/^(UU|AA) //')
+              mapfile -t conflicts < <(git status -s | grep -e '^AA ' -e '^UU ' | sed -e 's/^AA //' -e 's/^UU //')
 
               if (( ${#conflicts[@]} == 0 )); then
                 echo "No conflicts to add"
