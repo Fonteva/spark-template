@@ -30,6 +30,11 @@ on:
         required: false
         type: string
         default: none
+      allowed_branches:
+        description: 'Branch(es) where this workflow is allowed run'
+        required: false
+        type: string
+        default: FP15
     secrets:
       gh_token:
         description: Token to use for authentication to GitHub.
@@ -38,6 +43,7 @@ jobs:
   create_pr:
     runs-on: ubuntu-latest
     env:
+      ALLOWED_BRANCHES: ${{ inputs.allowed_branches }}
       CREATE_PR: ${{ inputs.create_pr }}
       DEST_BRANCH: ${{ inputs.dest_branch }}
       GH_TOKEN: ${{ secrets.gh_token }}
@@ -48,10 +54,15 @@ jobs:
       SOURCE_REF: ${{ inputs.source_ref }}
     steps:
       - name: Check branch
-        if: github.ref_name != 'FP15'
         run: |
-          echo "This workflow is not enabled on the ${{ github.ref_name }} branch"
-          exit 1
+          IFS=' ' read -r -a allowed_branches <<< "$ALLOWED_BRANCHES"
+
+          if [[ $(echo ${allowed_branches[@]} | fgrep -w "${{ github.ref_name }}") ]]; then
+            echo "This workflow is allowed to run on the ${{ github.ref_name }} branch"
+          else
+            echo "This workflow is not allowed to run on the ${{ github.ref_name }} branch"
+            exit 1
+          fi
 
       - name: Checkout
         uses: actions/checkout@v4
