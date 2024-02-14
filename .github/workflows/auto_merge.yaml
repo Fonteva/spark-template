@@ -1,0 +1,223 @@
+name: Auto Merge
+
+on:
+  workflow_call:
+    inputs:
+      source_pathspec:
+        description: 'Source pathspec'
+        required: true
+        type: string
+      source_ref:
+        description: 'Source ref(s)'
+        required: true
+        type: string
+      dest_branch:
+        description: 'Destination branch'
+        required: true
+        type: string
+      create_pr:
+        description: 'Create PR'
+        required: false
+        type: boolean
+        default: true
+      git_command:
+        description: 'Git command ("cherry-pick" or "merge")'
+        required: false
+        type: string
+        default: merge
+      merge_conflict_resolution:
+        description: 'Merge conflict resolution ("ours", "theirs", or "none")'
+        required: false
+        type: string
+        default: none
+    secrets:
+      gh_token:
+        description: Token to use for authentication to GitHub.
+
+jobs:
+  create_pr:
+    runs-on: ubuntu-latest
+    env:
+      CREATE_PR: ${{ inputs.create_pr }}
+      DEST_BRANCH: ${{ inputs.dest_branch }}
+      GH_TOKEN: ${{ secrets.gh_token }}
+      GIT_COMMAND: ${{ inputs.git_command }}
+      MERGE_CONFLICT_RESOLUTION: ${{ inputs.merge_conflict_resolution }}
+      SOURCE_BRANCH: ${{ github.ref_name }}
+      SOURCE_PATHSPEC: ${{ inputs.source_pathspec }}
+      SOURCE_REF: ${{ inputs.source_ref }}
+    steps:
+      - name: Check branch
+        if: github.ref_name != 'FP15'
+        run: |
+          echo "This workflow is not enabled on the ${{ github.ref_name }} branch"
+          exit 1
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run `git ${{ env.GIT_COMMAND }}` and create PR
+        run: |
+          git checkout "${SOURCE_BRANCH}"
+          git pull
+          
+          #
+          # Parse source refs
+          #
+
+          IFS=' ' read -r -a refs <<< "$SOURCE_REF"
+          source_commits=()
+
+          for ref in "${refs[@]}"; do
+            mapfile -t shas < <(git rev-parse --short --revs-only "$ref^{commit}")
+            source_commits+=("${shas[@]}")
+          done
+          
+          echo "Source commits: ${source_commits[@]}"
+
+          IFS=' ' read -r -a source_pathspec <<< "$SOURCE_PATHSPEC"
+          echo "Source pathspec: ${source_pathspec[@]}"
+
+          git config user.email "jenkins@fonteva.com"
+          git config user.name "Fonteva Devops"
+          git checkout "${DEST_BRANCH}"
+          git pull
+
+          #
+          # Check out PR branch
+          #
+
+          pr_branch="auto-${GIT_COMMAND}-${SOURCE_BRANCH/\//-}-${DEST_BRANCH/\//-}-$(date -u '+%Y%m%d%H%M%S')"
+          git checkout -b "${pr_branch}"
+
+          #
+          # Run `git cherry-pick` or `git merge`
+          #
+
+          merge_options=("--no-commit")
+
+          if [ "$MERGE_CONFLICT_RESOLUTION" != "none" ]; then
+            merge_options+=("--strategy-option=${MERGE_CONFLICT_RESOLUTION}")
+          fi
+
+          handle_git_error() {
+            if [ "$MERGE_CONFLICT_RESOLUTION" = "none" ]; then
+              mapfile -t conflicts < <(git status -s | grep -e '^UU ' | sed 's/^UU //')
+
+              if (( ${#conflicts[@]} == 0 )); then
+                echo "No conflicts to add"
+                exit 1
+              fi
+
+              for conflict in "${conflicts[@]}"; do
+                echo "Adding conflict: $conflict"
+                git add $conflict
+              done
+            else
+              exit 1
+            fi
+          }
+
+          if [ "$GIT_COMMAND" = "cherry-pick" ]; then
+            git cherry-pick "${merge_options[@]}" "${source_commits[@]}" || handle_git_error
+          elif [ "$GIT_COMMAND" = "merge" ]; then
+            git merge --log --no-ff "${merge_options[@]}" "${SOURCE_BRANCH}" || handle_git_error
+          else
+            echo "Unknown git command: ${GIT_COMMAND}"
+            exit 1
+          fi
+
+          # Unstage and restore any files that don't match source_pathspec:
+          git restore --staged "${source_pathspec[@]/#/\:\!}"
+          git checkout .
+          status=$(git status -s)
+          
+          if [ -z "$status" ]; then
+            echo "No changes"
+            exit
+          fi
+          
+          echo -e "Status:\n${status}\n"
+
+          #
+          # Commit changes and push pr_branch
+          #
+          
+          commit_msg="${GIT_COMMAND} ${SOURCE_BRANCH} ${source_commits[@]}"
+
+          if [ "$GIT_COMMAND" = "merge" ]; then
+            echo "Using default merge commit message"
+            git commit --no-edit
+          else
+            echo "Commit message: ${commit_msg}"
+            git commit -m "${commit_msg}"
+          fi
+          
+          git push --set-upstream origin "${pr_branch}"
+
+          #
+          # Create PR
+          #
+
+          if [ "$CREATE_PR" != "true" ]; then
+            exit
+          fi
+
+          log_each_commit=0
+          log_args=("--oneline")
+          log_commits=("${source_commits[@]}")
+
+          if (( ${#source_commits[@]} > 1 )); then
+            is_range=0
+
+            # we have a range of commits if one of them starts with a '^' character:
+            for commit in "${source_commits[@]}"; do
+              if [[ "$commit" = "^"* ]]; then
+                is_range=1
+              fi
+            done
+          
+            # if we don't have a range of commits, then log each commit separately:
+            if (( $is_range == 0 )); then
+              log_each_commit=1
+              log_args+=("-1")
+            fi
+          elif [ "$GIT_COMMAND" = "merge" ]; then
+            # only one source commit and command is `git merge`:
+            echo "Logging all commits included in merge"
+
+            if [ "$(git rev-parse --short $SOURCE_BRANCH)" = "${source_commits[0]}" ]; then
+              source_commit="$SOURCE_BRANCH"
+          else
+              source_commit="${source_commits[0]}"
+          fi
+          
+            log_commits=("${DEST_BRANCH}...${source_commit}")
+            log_args=("--pretty=format:%h (from %S) %s")
+          else
+            # only one source commit and command is `git cherry-pick`:
+            echo "Logging single commit"
+            log_args+=("-1")
+          fi
+
+          if (( $log_each_commit == 1 )); then
+            echo "Logging commits ${log_commits[@]} separately to avoid including ancestors"
+            logs=()
+
+            for commit in "${log_commits[@]}"; do
+              log=$(git log "${log_args[@]}" "$commit")
+              logs+=("$log")
+            done
+          else
+            echo "Logging commits ${log_commits[@]}"
+            mapfile -t logs < <(git log "${log_args[@]}" "${log_commits[@]}")
+          fi
+
+          overall_summary=$(git log --pretty=format:%s -1 "${source_commits[@]}")
+          pr_title="${commit_msg}: ${overall_summary}"
+          pr_body=$(printf "%s\n" "${commit_msg}" "${logs[@]}")
+          echo "PR title: ${pr_title}"
+          echo -e "PR body:\n${pr_body}"
+            gh pr create --base $DEST_BRANCH --title "${pr_title}" --body "${pr_body}"
