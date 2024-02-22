@@ -96,14 +96,24 @@ jobs:
         if: ${{ github.event.action != 'closed' && inputs.RUN_NPM_INSTALL && !inputs.DO_NOT_BUILD }}
         env:
           NPM_INSTALL_PACKAGES: ${{ inputs.NPM_INSTALL_PACKAGES }}
+        shell: pwsh
         run: |
           npm install
 
-          if [ ! -z "$NPM_INSTALL_PACKAGES" ]; then
-            IFS=','
-            read -a packages <<< "$NPM_INSTALL_PACKAGES"
-            npm install "${packages[@]}"
-          fi
+          if ($env:NPM_INSTALL_PACKAGES) {
+            foreach ($package in $env:NPM_INSTALL_PACKAGES.Split(',')) {
+              npm install $package
+            }
+          }
+
+        # run: |
+        #   npm install
+
+        #   if [ ! -z "$NPM_INSTALL_PACKAGES" ]; then
+        #     IFS=','
+        #     read -a packages <<< "$NPM_INSTALL_PACKAGES"
+        #     npm install "${packages[@]}"
+        #   fi
 
       - name: Authorize Devhub
         env:
