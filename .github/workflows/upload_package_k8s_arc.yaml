@@ -1,0 +1,317 @@
+name: Upload Package
+
+env:
+  SF_USE_GENERIC_UNIX_KEYCHAIN: "true"
+  PROD_INST_URL: "https://login.salesforce.com"
+
+on:
+  workflow_call:
+    inputs:
+      AUTH_MODE:
+        description: How to authenticate to the packaging org.  If set to 'JWT', the SFDX_CLIENT_ID and SFDX_HUB_KEY secrets are required.  If set to 'URL', the SFDX_PACKAGING_ORG_AUTH_JSON secret is required.
+        type: string
+        default: JWT
+      CCI_FLOW_NAME:
+        description: The name of a CumulusCI flow to deploy the source files to the packaging org.
+        type: string
+      CREATE_TAG:
+        description: If true, create a Git tag with the version number after uploading.
+        type: boolean
+        default: true
+      IS_PATCH:
+        description: If true, do a patch upload instead of a regular package upload.
+        type: boolean
+        default: false
+      ORG_ALIAS:
+        description: The org alias to use for CumulusCI and sfdx commands.
+        required: true
+        type: string
+      ORG_NAMESPACE:
+        description: The namespace of the packaging org.  Required if UPLOAD_PACKAGE is true.
+        type: string
+      ORG_USERNAME:
+        description: The user name to use when authenticating to the packaging org.  Required if AUTH_MODE is 'JWT'.
+        type: string
+      REPO:
+        description: The name of the Git repo.  Required if UPLOAD_PACKAGE is true.
+        type: string
+      PUBLISH_TO_FONDASH:
+        description: If true, publish the new package version details to Fondash.
+        type: boolean
+        default: true
+      PUBLISH_TO_MARKETPLACE:
+        description: If true, publish the new package version details to Marketplace.
+        type: boolean
+        default: true
+      PUBLISH_TO_TEAMS:
+        description: If true, publish the new package details to Teams.
+        type: boolean
+        default: true
+      SF_DEPLOY_CMD:
+        description: "An sfdx command to deploy the source files to the packaging org.  For example: 'force:mdapi:deploy -d src -w 10'"
+        type: string
+      CHECKOUT_SUBMODULES:
+        description: If true, update the repo's build submodule after checking out.
+        type: boolean
+        default: true
+      UPLOAD_PACKAGE:
+        description: If true, upload a new package version after deploying the source files.
+        type: boolean
+        default: true
+      VERSION_NAME:
+        description: The version name to assign when uploading a new package version.  Required if UPLOAD_PACKAGE is true.
+        type: string
+      VERSION_NUM_MAJOR:
+        description: The major version number of the patch.  Required if IS_PATCH is true.
+        type: string
+      VERSION_NUM_MINOR:
+        description: The minor version number of the patch.  Required if IS_PATCH is true.
+        type: string
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        description: The ID of the AWS access key to use when retrieving secret values.  Required if UPLOAD_PACKAGE is true.
+        required: false
+      AWS_SECRET_ACCESS_KEY:
+        description: The AWS access key secret to use when retrieving secret values.  Required if UPLOAD_PACKAGE is true.
+        required: false
+      BUILD_SSH_RSA_KEY:
+        description: The RSA private key to use to check out source files.
+        required: true
+      CUMULUSCI_SERVICE_github:
+        description: The CumulusCI GitHub service account.  Required if CCI_FLOW_NAME is set.
+        required: false
+      SFDX_CLIENT_ID:
+        description: The client ID to use when authenticating to the packaging org (JWT auth).
+        required: false
+      SFDX_HUB_KEY:
+        description: The private key to use when authenticating to the packaging org (JWT auth).  Required if SFDX_CLIENT_ID is set.
+        required: false
+      SFDX_PACKAGING_ORG_AUTH_JSON:
+        description: The Salesforce authentication URL to use when authenticating to the packaging org (URL auth).  This should contain the output of the command 'sfdx force:org:display -u <OrgUsername> --verbose --json'.
+        required: false
+
+jobs:
+  build:
+    runs-on: [self-hosted, k8s]
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      CCI_FLOW_NAME: ${{ inputs.CCI_FLOW_NAME }}
+      CUMULUSCI_SERVICE_github: ${{ secrets.CUMULUSCI_SERVICE_GITHUB }}
+      IS_PATCH: ${{ inputs.IS_PATCH }}
+      ORG_USERNAME: ${{ inputs.ORG_USERNAME }}
+      ORG_NAMESPACE: ${{ inputs.ORG_NAMESPACE }}
+      ORG_ALIAS: ${{ inputs.ORG_ALIAS }}
+      MARKETPLACE_TOKEN: ${{ secrets.MARKETPLACE_TOKEN }}
+      REPO: ${{ inputs.REPO }}
+      VERSION_NAME: ${{ inputs.VERSION_NAME }}
+      VERSION_NUM_MAJOR: ${{ inputs.VERSION_NUM_MAJOR }}
+      VERSION_NUM_MINOR: ${{ inputs.VERSION_NUM_MINOR }}
+      SF_DEPLOY_CMD: ${{ inputs.SF_DEPLOY_CMD }}
+      SFDX_CLIENT_ID: ${{ secrets.SFDX_CLIENT_ID }}
+      SFDX_HUB_KEY: ${{ secrets.SFDX_HUB_KEY }}
+      SFDX_KEY_FILE: /tmp/sfdx.key
+      # SFDX_PACKAGING_ORG_AUTH_JSON: ${{ secrets.SFDX_PACKAGING_ORG_AUTH_JSON }}
+      SKIP_FONDASH: ${{ !inputs.PUBLISH_TO_FONDASH }}
+      SKIP_MARKETPLACE: ${{ !inputs.PUBLISH_TO_MARKETPLACE }}
+      SKIP_PUBLISH: ${{ !inputs.PUBLISH_TO_FONDASH && !inputs.PUBLISH_TO_MARKETPLACE && !inputs.PUBLISH_TO_TEAMS }}
+      SKIP_TEAMS: ${{ !inputs.PUBLISH_TO_TEAMS }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ssh-key: ${{ secrets.BUILD_SSH_RSA_KEY }}
+          submodules: ${{ inputs.CHECKOUT_SUBMODULES }}
+
+      - name: Update Build Submodule
+        if: ${{ inputs.CHECKOUT_SUBMODULES }}
+        run: |
+          cd build
+          git checkout master
+          git pull
+
+      - name: Checkout ops-scripts
+        if: ${{ inputs.UPLOAD_PACKAGE }}
+        uses: actions/checkout@v3
+        with:
+          ssh-key: ${{ secrets.BUILD_SSH_RSA_KEY }}
+          repository: Fonteva/ops-scripts
+          path: ops-scripts
+
+      - name: Authenticate to Packaging Org (JWT)
+        if: ${{ inputs.AUTH_MODE == 'JWT' }}
+        run: |
+          if [ -z "$ORG_USERNAME" ];then
+            echo "ORG_USERNAME input param is required if inputs.AUTH_MODE == 'JWT'"
+            exit -1
+          fi
+
+          if [ -z "$SFDX_HUB_KEY" ];then
+            echo "SFDX_HUB_KEY input param is required if inputs.AUTH_MODE == 'JWT'"
+            exit -1
+          fi
+
+          echo "$SFDX_HUB_KEY" > $SFDX_KEY_FILE
+          sf auth jwt grant \
+            --client-id $SFDX_CLIENT_ID \
+            --username $ORG_USERNAME \
+            --jwt-key-file $SFDX_KEY_FILE \
+            --instance-url $PROD_INST_URL
+          rm -f $SFDX_KEY_FILE
+          
+      # - name: Authenticate to Packaging Org (Auth URL)
+      #   if: ${{ inputs.AUTH_MODE == 'URL' }}
+      #   run: |
+      #     authFile=/tmp/authFile.json
+      #     echo "$SFDX_PACKAGING_ORG_AUTH_JSON" > $authFile
+      #     sf auth:sfdxurl:store -f $authFile -a $ORG_ALIAS
+      #     rm -f $authFile
+          
+      - name: Deploy Source Files (cci - JWT)
+        if: ${{ inputs.AUTH_MODE == 'JWT' && inputs.CCI_FLOW_NAME }}
+        run: |
+          if (!$env:CUMULUSCI_SERVICE_github) {
+            echo "CUMULUSCI_SERVICE_github input param is required if CCI_FLOW_NAME is set"
+            exit -1
+          }
+
+          $cciOrg = "CUMULUSCI_ORG_${env:ORG_ALIAS}"
+          echo $cciOrg
+          Set-Content `
+            -Path env:$cciOrg `
+            -Value ('{"username": "' + $env:ORG_USERNAME + '", "instance_url": "' + $env:PROD_INST_URL + '"}')
+          Get-Content env:$cciOrg
+          cci flow run $env:CCI_FLOW_NAME --org $env:ORG_ALIAS
+          
+      # - name: Deploy Source Files (cci - Auth URL)
+      #   if: ${{ inputs.AUTH_MODE == 'URL' && inputs.CCI_FLOW_NAME }}
+      #   run: |
+      #     export PATH="/usr/local/lib/nodejs/bin:$PATH:$SFDX_PATH"
+      #     cci org import $ORG_ALIAS $ORG_ALIAS
+      #     cci flow run $CCI_FLOW_NAME --org $ORG_ALIAS
+          
+      # - name: Deploy Source Files (sf - JWT)
+      #   if: ${{ inputs.AUTH_MODE == 'JWT' && inputs.SF_DEPLOY_CMD }}
+      #   run: |
+      #     echo "** Running 'sf $SF_DEPLOY_CMD' ..."
+      #     sf $SF_DEPLOY_CMD -u $ORG_USERNAME
+          
+      # - name: Deploy Source Files (sf - Auth URL)
+      #   if: ${{ inputs.AUTH_MODE == 'URL' && inputs.SF_DEPLOY_CMD }}
+      #   run: |
+      #     echo "** Running 'sf $SF_DEPLOY_CMD' ..."
+      #     sf $SF_DEPLOY_CMD -u $ORG_ALIAS
+                    
+      - name: Upload Package
+        id: upload_package
+        if: ${{ inputs.UPLOAD_PACKAGE }}
+        shell: pwsh
+        run: |
+          if (!$env:REPO) {
+            echo "REPO input param is required if UPLOAD_PACKAGE is true"
+            exit -1
+          }
+
+          if (!$env:ORG_NAMESPACE) {
+            echo "ORG_NAMESPACE input param is required if UPLOAD_PACKAGE is true"
+            exit -1
+          }
+
+          if (!$env:VERSION_NAME) {
+            echo "VERSION_NAME input param is required if UPLOAD_PACKAGE is true"
+            exit -1
+          }
+
+          commitHash = (git rev-parse HEAD | Out-String).Trim()
+          echo "** Commit = $commitHash"
+          
+          echo "** Getting Jira tickets ..."
+          
+          $jiraticket = git log --first-parent --oneline --since="24 hours ago" `
+            | sed -i -e 's/[[:blank:]]/-/g' `
+            | grep -P -o "(?i)PD-[0-9]{1,}" `
+            | tr '\n' ',' `
+            | tr [a-z] [A-Z] `
+            | Out-String
+
+          if (!$jiraticket) {
+            echo "** No Jira ticket found"
+            $jiraticket = "NoTickets"
+          } else {
+            echo "jiraticket = $jiraticket"
+          }
+          
+          echo "** Running 'npm install' ..."
+          pushd ./ops-scripts/uploads-scripts/github
+          npm install
+          
+          $uploadArgs = @(
+            './upload.js',
+            "--namespace=$env:ORG_NAMESPACE",
+            "--versionname=$env:VERSION_NAME",
+            "--tickets=$jiraticket",
+            "--repo=$env:REPO",
+            "--commit=$commitHash"
+          )
+          
+          if ($env:SKIP_FONDASH -eq "true") {
+            $uploadArgs += "--skip-fondash"
+          }
+          
+          if ($env:SKIP_MARKETPLACE -eq "true") {
+            $uploadArgs += "--skip-marketplace"
+          }
+          
+          if ($env:SKIP_TEAMS -eq "true") {
+            $uploadArgs += "--skip-teams"
+          }
+          
+          if ($env:SKIP_PUBLISH -eq "true") {
+            $uploadArgs += "--skip-publish"
+          }
+          
+          if ($env:IS_PATCH -eq "true") {
+            $uploadArgs += @(
+              "--ispatch",
+              "--major=$env:VERSION_NUM_MAJOR",
+              "--minor=$env:VERSION_NUM_MINOR"
+            )
+          }
+          
+          if (!$env:ORG_USERNAME") {
+            $env:ORG_USERNAME = $env:ORG_ALIAS
+          }
+
+          $orgInfo = sfdx force:org:display -u $env:ORG_USERNAME --json `
+            | Out-String `
+            | ConvertFrom-Json
+          $uploadArgs += @(
+            "--accesstoken=$($orgInfo.result.accessToken)",
+            "--instanceurl=$($orgInfo.result.instanceUrl)"
+          )
+          
+          echo "uploadArgs = $uploadArgs"
+          
+          echo "** Running 'node upload.js' ..."
+          echo node @uploadArgs
+          
+          if (Test-Path "version.txt") {
+            $version = (Get-Content -Raw -Path version.txt).Trim()
+            echo "Version is $version"
+            echo "version=$version" >> "$GITHUB_OUTPUT"
+          }
+
+          popd
+
+      # - name: Create Version Tag
+      #   uses: actions/github-script@v6
+      #   if: ${{ inputs.UPLOAD_PACKAGE && inputs.CREATE_TAG && steps.upload_package.outputs.version }}
+      #   with:
+      #     github-token: ${{ secrets.GITHUB_TOKEN }}
+      #     script: |
+      #       github.rest.git.createRef({
+      #         owner: context.repo.owner,
+      #         repo: context.repo.repo,
+      #         ref: 'refs/tags/v${{ steps.upload_package.outputs.version }}',
+      #         sha: context.sha
+      #       })
