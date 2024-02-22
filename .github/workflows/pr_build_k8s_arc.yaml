@@ -124,7 +124,7 @@ jobs:
 
           if [ ! -z "$DEVHUB_KEY" ]; then
             echo "$DEVHUB_KEY" | base64 -d > $DEVHUB_KEY_FILE
-          elif [ ! -z "" ]; then
+          elif [ ! -z "$DEVHUB_KEY_BASE64" ]; then
             echo "$DEVHUB_KEY_BASE64" | base64 -d > $DEVHUB_KEY_FILE
           else
             echo "Either DEVHUB_KEY or DEVHUB_KEY_BASE64 must be set"
