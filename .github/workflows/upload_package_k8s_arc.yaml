@@ -92,7 +92,13 @@ on:
 
 jobs:
   build:
-    runs-on: [self-hosted, k8s]
+    runs-on: arc-runner-set
+    container:
+      image: ghcr.io/fonteva/d2x-fork:latest
+      options: --user root
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -158,7 +164,7 @@ jobs:
             --jwt-key-file $SFDX_KEY_FILE \
             --instance-url $PROD_INST_URL
           rm -f $SFDX_KEY_FILE
-          
+
       # - name: Authenticate to Packaging Org (Auth URL)
       #   if: ${{ inputs.AUTH_MODE == 'URL' }}
       #   run: |
