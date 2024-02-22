@@ -1,0 +1,171 @@
+name: PR Build
+
+env:
+  SF_USE_GENERIC_UNIX_KEYCHAIN: "true"
+  PROD_INST_URL: "https://login.salesforce.com"
+  TEST_INST_URL: "https://test.salesforce.com"
+
+on:
+  workflow_call:
+    inputs:
+      CCI_FLOW_NAME:
+        description: 'Cumulusci flow name to run when building'
+        required: true
+        type: string
+      CHECKOUT_SUBMODULES:
+        description: 'If true, checkout any submodules for the repo'
+        required: false
+        type: boolean
+        default: true
+      DO_NOT_BUILD:
+        description: 'If true, do not run the build steps'
+        required: false
+        type: boolean
+        default: false
+      NPM_INSTALL_PACKAGES:
+        description: 'Any additional NPM packages to install'
+        required: false
+        type: string
+        default: '@salesforce/sfdx-lwc-jest'
+      RUN_NPM_INSTALL:
+        description: 'If true, run `npm install` before building'
+        required: false
+        type: boolean
+        default: false
+      SCRATCH_ORG_ALIAS:
+        description: 'Alias to use for the scratch org'
+        required: true
+        type: string
+      SCRATCH_ORG_JSON:
+        description: 'JSON file containing the scratch org config settings'
+        required: true
+        type: string
+      SCRATCH_ORG_USERNAME:
+        description: 'User name to use for the scratch org'
+        required: true
+        type: string
+    secrets:
+      BUILD_SSH_RSA_KEY:
+        required: false
+      CUMULUSCI_SERVICE_GITHUB:
+        required: true
+      DEVHUB_CLIENTID:
+        required: true
+      DEVHUB_KEY:
+        required: true
+      DEVHUB_KEY_BASE64:
+        required: true
+      DEVHUB_USERNAME:
+        required: true
+
+jobs:
+  build:
+    runs-on: arc-runner-set
+    container:
+      image: ghcr.io/fonteva/d2x-fork:latest
+      options: --user root
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+      env:
+        CCI_FLOW_NAME: ${{ inputs.CCI_FLOW_NAME }}
+        # CUMULUSCI_SERVICE_github: "{ \"username\": \"${{ github.actor }}\", \"token\": \"${{ secrets.github-token }}\", \"email\": \"${{ secrets.gh-email }}\" }"
+        CUMULUSCI_SERVICE_github: ${{ secrets.CUMULUSCI_SERVICE_github }}
+        DEV_HUB_CLIENT_ID: "${{ secrets.DEVHUB_CLIENTID }}"
+        # DEV_HUB_PRIVATE_KEY: "${{ secrets.DEVHUB_KEY_RAW }}"
+        DEV_HUB_USERNAME: "${{ secrets.DEVHUB_USERNAME }}"
+        DEVHUB_KEY: "${{ secrets.DEVHUB_KEY }}"
+        DEVHUB_KEY_BASE64: "${{ secrets.DEVHUB_KEY_BASE64 }}"
+        DEVHUB_KEY_FILE: /tmp/dev_hub.key
+        SCRATCH_ORG_ALIAS: ${{ inputs.SCRATCH_ORG_ALIAS }}
+        SCRATCH_ORG_JSON: ${{ inputs.SCRATCH_ORG_JSON }}
+        SCRATCH_ORG_USERNAME: ${{ inputs.SCRATCH_ORG_USERNAME }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ssh-key: ${{ secrets.BUILD_SSH_RSA_KEY }}
+          submodules: ${{ inputs.CHECKOUT_SUBMODULES }}
+
+      - name: Update Build Submodule
+        if: ${{ github.event.action != 'closed' && inputs.CHECKOUT_SUBMODULES && !inputs.DO_NOT_BUILD }}
+        run: |
+          cd build
+          git checkout master
+          git pull
+
+      - name: NPM Install
+        if: ${{ github.event.action != 'closed' && inputs.RUN_NPM_INSTALL && !inputs.DO_NOT_BUILD }}
+        run: |
+          npm install
+
+          if [ !-z "$NPM_INSTALL_PACKAGES" ]; then
+            IFS="," read -ra packages <<< "$NPM_INSTALL_PACKAGES"
+            npm install "${packages[@]}"
+          fi
+
+      - name: Authorize Devhub
+        run: |
+          # /usr/local/bin/devhub.sh
+          echo "$DEVHUB_KEY_BASE64" | base64 -d > $DEVHUB_KEY_FILE
+          sf auth jwt grant \
+            --client-id $DEV_HUB_CLIENT_ID \
+            --username $DEV_HUB_USERNAME \
+            --jwt-key-file $DEVHUB_KEY_FILE \
+            --set-default-dev-hub \
+            --instance-url $PROD_INST_URL
+
+      - name: Build
+        if: ${{ github.event.action != 'closed' && !inputs.DO_NOT_BUILD }}
+        shell: pwsh
+        run: |
+          $data = sf data query `
+              -q "SELECT LoginUrl FROM ScratchOrgInfo where Status='Active' and SignupUsername='${env:SCRATCH_ORG_USERNAME}'" `
+              -o $env:DEV_HUB_USERNAME `
+              --json `
+            | Out-String `
+            | ConvertFrom-Json
+
+          if ($data.result.totalSize -gt 0) {
+            echo "** Using existing scratch org ($loginUrl)"
+
+            $loginUrl = $data.result.records[0].LoginUrl
+            sf auth jwt grant `
+              --client-id $env:DEV_HUB_CLIENT_ID `
+              --username $env:SCRATCH_ORG_USERNAME `
+              --jwt-key-file $env:DEVHUB_KEY_FILE `
+              --instance-url $loginUrl
+
+            sf org display user -o $env:SCRATCH_ORG_USERNAME
+            
+            $cciOrg = "CUMULUSCI_ORG_${env:SCRATCH_ORG_ALIAS}"
+            echo $cciOrg
+            Set-Content `
+              -Path env:$cciOrg `
+              -Value ('{"username": "' + $env:SCRATCH_ORG_USERNAME + '", "instance_url": "' + $env:TEST_INST_URL + '"}')
+            Get-Content env:$cciOrg
+            $env:SFDX_CLIENT_ID = $env:DEV_HUB_CLIENT_ID
+            $env:SFDX_HUB_KEY = Get-Content -Raw -Path $env:DEVHUB_KEY_FILE
+          } else {
+            echo "** Creating new scratch org"
+            sf force org create `
+              --definitionfile $env:SCRATCH_ORG_JSON `
+              --durationdays 30 `
+              username=$env:SCRATCH_ORG_USERNAME
+            sf force user password generate --target-org $env:SCRATCH_ORG_USERNAME
+            sf org display user --target-org $env:SCRATCH_ORG_USERNAME
+            cci org import $env:SCRATCH_ORG_USERNAME $env:SCRATCH_ORG_ALIAS
+          }
+
+          Remove-Item -Force $env:DEVHUB_KEY_FILE
+
+          cci flow run $env:CCI_FLOW_NAME --org $env:SCRATCH_ORG_ALIAS
+
+      - name: Delete Scratch Org
+        if: ${{ github.event.action == 'closed' }}
+        run: |
+          echo "** Deleting scratch org $SCRATCH_ORG_USERNAME"
+          sf data delete record \
+            --sobject ActiveScratchOrg \
+            --target-org $DEV_HUB_USERNAME \
+            --where "SignupUsername='$SCRATCH_ORG_USERNAME'"
