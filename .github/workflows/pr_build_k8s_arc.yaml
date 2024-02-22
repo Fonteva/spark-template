@@ -96,6 +96,8 @@ jobs:
 
       - name: NPM Install
         if: ${{ github.event.action != 'closed' && inputs.RUN_NPM_INSTALL && !inputs.DO_NOT_BUILD }}
+        env:
+          NPM_INSTALL_PACKAGES: ${{ inputs. NPM_INSTALL_PACKAGES }}
         run: |
           npm install
 
