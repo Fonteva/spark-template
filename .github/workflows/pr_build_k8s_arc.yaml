@@ -100,8 +100,8 @@ jobs:
           npm install
 
           if [ !-z "$NPM_INSTALL_PACKAGES" ]; then
-            IFS=","
-            read -ra packages <<< "$NPM_INSTALL_PACKAGES"
+            IFS=','
+            read -a packages <<< "$NPM_INSTALL_PACKAGES"
             npm install "${packages[@]}"
           fi
 
