@@ -166,7 +166,7 @@ on:
         required: true
 
 jobs:
-  build:
+  create_package_version:
     runs-on: arc-runner-set
     container:
       image: ghcr.io/fonteva/d2x-fork:latest
