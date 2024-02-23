@@ -305,10 +305,12 @@ jobs:
         if: ${{ !inputs.CCI_FLOW_NAME }}
         shell: pwsh
         run: |
+          dir env:
+
           if ($env:VERSION_TAG) {
             $tag = $env:VERSION_TAG
           } else {
-            git config --global --add safe.directory "${{ github.workspace }}"
+            git config --global --add safe.directory $env:GITHUB_WORKSPACE
             $tag = (git log -n 1 --pretty='%C(auto)%h' | Out-String).Trim()
           }
 
