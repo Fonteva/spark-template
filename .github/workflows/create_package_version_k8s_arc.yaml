@@ -143,8 +143,8 @@ on:
         default: ""
       WAIT_TIMEOUT:
         description: The number of minutes to wait for the package version to create before timing out.
-        type: number
-        default: 60
+        type: string
+        default: '60'
     secrets:
       # AWS_ACCESS_KEY_ID:
       #   required: false
