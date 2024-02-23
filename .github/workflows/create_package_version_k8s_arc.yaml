@@ -202,6 +202,7 @@ jobs:
       UNINSTALL_SCRIPT: ${{ inputs.UNINSTALL_SCRIPT }}
       VERBOSE: ${{ inputs.VERBOSE }}
       VERSION_DESCRIPTION: ${{ inputs.VERSION_DESCRIPTION }}
+      VERSION_ID_FILE: /tmp/version_id.txt
       VERSION_NAME: ${{ inputs.VERSION_NAME }}
       VERSION_NUMBER: ${{ inputs.VERSION_NUMBER }}
       VERSION_TAG: ${{ inputs.VERSION_TAG }}
@@ -381,7 +382,7 @@ jobs:
               $versionId = $result.result.SubscriberPackageVersionId
               echo "Package Version ID       : $versionId"
               echo "Package Installation URL : https://login.salesforce.com/packaging/installPackage.apexp?p0=$versionId"
-              echo "version_id=$versionId" >> $GITHUB_OUTPUT
+              [IO.File]::WriteAllText($env:VERSION_ID_FILE, $versionId)
             } else {
               echo "ERROR: `sf package version create` failed"
               exit 1
@@ -400,8 +401,11 @@ jobs:
       - name: Promote Package Version (sf)
         if: ${{ !inputs.DRY_RUN && inputs.PROMOTE_PACKAGE_VERSION && !inputs.CCI_FLOW_NAME }}
         run: |
-          versionId="${{ steps.create_package_version.outputs.version_id }}"
-          sf package version promote --no-prompt --package $versionId
+          if [ -f "$VERSION_ID_FILE" ]; then
+            version_id=$(cat $env:VERSION_ID_FILE)
+            echo "Version ID: $version_id"
+            sf package version promote --no-prompt --package $version_id
+          fi
 
       # TODO: Implement this:
       #- name: Post Package Details
