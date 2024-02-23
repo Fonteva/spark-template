@@ -51,7 +51,7 @@ on:
         description: "An sfdx command to deploy the source files to the packaging org.  For example: 'force:mdapi:deploy -d src -w 10'"
         type: string
       CHECKOUT_SUBMODULES:
-        description: If true, update the repo's build submodule after checking out.
+        description: If true, checkout the repo's submodules.
         type: boolean
         default: true
       UPLOAD_PACKAGE:
@@ -231,11 +231,12 @@ jobs:
             exit -1
           }
 
-          commitHash = (git rev-parse HEAD | Out-String).Trim()
+          $commitHash = "${{ github.sha }}"
           echo "** Commit = $commitHash"
           
           echo "** Getting Jira tickets ..."
           
+          git config --global --add safe.directory "${{ github.workspace }}"
           $ticketRegex = '(?i)(PD-[0-9]+)'
           $jiraTicket = ( `
             git log --first-parent --oneline --since="8 weeks ago" `
@@ -243,13 +244,6 @@ jobs:
               | Select-String -Pattern $ticketRegex `
               |% { [regex]::Match($_, $ticketRegex, 'IgnoreCase').Groups[1].Value.ToUpper() } `
           ) -join ','
-          # $jiraTicket = git log --first-parent --oneline --since="24 hours ago" `
-          #   |% { $_ -replace '\s','-' } `
-          #   | Select-String -Pattern $ticketRegex `
-          #   | [regex]::
-          #   | tr '\n' ',' `
-          #   | tr [a-z] [A-Z] `
-          #   | Out-String
 
           if (!$jiraTicket) {
             echo "** No Jira ticket found"

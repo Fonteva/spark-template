@@ -114,7 +114,7 @@ jobs:
           # /usr/local/bin/devhub.sh
 
           if [ ! -z "$DEVHUB_KEY" ]; then
-            echo "$DEVHUB_KEY" | base64 -d > $DEVHUB_KEY_FILE
+            echo "$DEVHUB_KEY" > $DEVHUB_KEY_FILE
           elif [ ! -z "$DEVHUB_KEY_BASE64" ]; then
             echo "$DEVHUB_KEY_BASE64" | base64 -d > $DEVHUB_KEY_FILE
           else

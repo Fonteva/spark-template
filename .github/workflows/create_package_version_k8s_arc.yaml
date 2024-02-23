@@ -1,0 +1,474 @@
+name: Create Package Version
+
+env:
+  SF_USE_GENERIC_UNIX_KEYCHAIN: "true"
+  PROD_INST_URL: "https://login.salesforce.com"
+
+on:
+  workflow_call:
+    inputs:
+      API_VERSION:
+        description: The API version to use when creating the new package version.  If not set, the API version of the sfdx-package.json file is used.
+        type: string
+        default: ""
+      BRANCH_NAME:
+        description: Name of the branch in your source control system that the package version is based on.
+        type: string
+        default: ""
+      CCI_FLOW_NAME:
+        description: The name of a CumulusCI flow to create the new package version.
+        type: string
+        default: ""
+      CHECKOUT_APEX_MOCKS:
+        description: If true, check out the ApexMocks repo.
+        type: boolean
+        default: false
+      CHECKOUT_APEX_MOCKS_PATH:
+        description: Where to check out the ApexMocks repo.
+        type: string
+        default: src/ApexMocks
+      CHECKOUT_APEX_MOCKS_REF:
+        description: The branch, tag, or SHA to use when checking out the ApexMocks repo.
+        type: string
+        default: "1.0"
+      CHECKOUT_DAL:
+        description: If true, check out the Data-Access-Library repo.
+        type: boolean
+        default: false
+      CHECKOUT_DAL_PATH:
+        description: Where to check out the Data-Access-Library repo.
+        type: string
+        default: src/DAL
+      CHECKOUT_DAL_REF:
+        description: The branch, tag, or SHA to use when checking out the Data-Access-Library repo.
+        type: string
+        default: "1.8"
+      CODE_COVERAGE:
+        description: If true, run unit tests and calculate code coverage.
+        type: boolean
+        default: true
+      CHECKOUT_SUBMODULES:
+        description: If true, checkout the repo's submodules.
+        type: boolean
+        default: true
+      # CREATE_TAG:
+      #   description: If true, create a Git tag with the new package version number after promoting.
+      #   type: boolean
+      #   default: true
+      DEFINITION_FILE:
+        description: The path to the scratch org definition file for the package version (relative to the repository directory).
+        type: string
+        default: ""
+      DRY_RUN:
+        description: If true, print the sf or cci commands, but do not run them.
+        type: boolean
+        default: false
+      INSTALLATION_KEY:
+        description: The installation key for installing the package version.  If not set, installing the package version will not require an installation key.
+        type: string
+        default: ""
+      LANGUAGE:
+        description: The language of the new package version.  If not set, the default language is used.
+        type: string
+        default: ""
+      PACKAGE:
+        description: The alias or ID of the package.
+        type: string
+      PACKAGE_SRC:
+        description: The directory path where the package source files are located (relative to the repository directory).  If not set, the source directory from the sfdx-project.json file is used.
+        type: string
+        default: ""
+      POST_INSTALL_SCRIPT:
+        description: Name of the post-install script; applies to managed packages only.
+        type: string
+        default: ""
+      POST_INSTALL_URL:
+        description: Post-install instructions URL.
+        type: string
+        default: ""
+      # POST_PACKAGE_DETAILS:
+      #   description: If true, post details of the new package version.
+      #   type: boolean
+      #   default: false
+      PROMOTE_PACKAGE_VERSION:
+        description: If true, promote the package version after creating it.
+        type: boolean
+        default: false
+      RELEASE_NOTES_URL:
+        description: Release notes URL.
+        type: string
+        default: ""
+      # REPO:
+      #   description: The name of the Git repo.  Required if POST_PACKAGE_DETAILS is true.
+      #   type: string
+      SKIP_ANCESTOR_CHECK:
+        description:  Overrides ancestry requirements, which allows you to specify a package ancestor that isn’t the highest released package version.
+        type: boolean
+        default: false
+      # SKIP_FONDASH:
+      #   description: If true, don't publish the new package version details to Fondash.
+      #   type: boolean
+      #   default: false
+      # SKIP_PUBLISH:
+      #   description: If true, don't publish the new package details to Teams, Marketplace, or Fondash.
+      #   type: boolean
+      #   default: false
+      SKIP_VALIDATION:
+        description: Skip validation during package version creation; you can’t promote unvalidated package versions.
+        type: boolean
+        default: false
+      UNINSTALL_SCRIPT:
+        description: Uninstall script name; applies to managed packages only.
+        type: string
+        default: ""
+      VERBOSE:
+        description: Display verbose output for the `sf ...` command
+        type: boolean
+        default: false
+      VERSION_DESCRIPTION:
+        description: The description of the package version.  If not set, the version description from the sfdx-project.json file is used.
+        type: string
+        default: ""
+      VERSION_NAME:
+        description: The version name to assign to the new package version.  If not set, the version name from the sfdx-project.json file is used.
+        type: string
+        default: ""
+      VERSION_NUMBER:
+        description: The version number for the new package version.  If not set, the version number from the sfdx-project.json file is used.
+        type: string
+        default: ""
+      VERSION_TAG:
+        description: The version tag for the new package version.  If not set, the short form of the hash of the last commit is used.
+        type: string
+        default: ""
+      WAIT_TIMEOUT:
+        description: The number of minutes to wait for the package version to create before timing out.
+        type: number
+        default: 60
+    secrets:
+      # AWS_ACCESS_KEY_ID:
+      #   required: false
+      # AWS_SECRET_ACCESS_KEY:
+      #   required: false
+      BUILD_SSH_RSA_KEY:
+        description: The RSA private key to use to check out source files.
+        required: true
+      # CUMULUSCI_SERVICE_github:
+      #   description: The CumulusCI GitHub service account.  Required if CCI_FLOW_NAME is set.
+      #   required: false
+      DEVHUB_CLIENTID:
+        required: true
+      DEVHUB_KEY:
+        required: false
+      DEVHUB_KEY_BASE64:
+        required: false
+      DEVHUB_USERNAME:
+        required: true
+
+jobs:
+  build:
+    runs-on: arc-runner-set
+    container:
+      image: ghcr.io/fonteva/d2x-fork:latest
+      options: --user root
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    env:
+      API_VERSION: ${{ inputs.API_VERSION }}
+      # AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      # AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      BRANCH_NAME: ${{ inputs.BRANCH_NAME }}
+      CCI_FLOW_NAME: ${{ inputs.CCI_FLOW_NAME }}
+      CHECKOUT_APEX_MOCKS_PATH: ${{ inputs.CHECKOUT_APEX_MOCKS_PATH }}
+      CHECKOUT_DAL_PATH: ${{ inputs.CHECKOUT_DAL_PATH }}
+      CODE_COVERAGE: ${{ inputs.CODE_COVERAGE }}
+      # CUMULUSCI_SERVICE_github: ${{ secrets.CUMULUSCI_SERVICE_GITHUB }}
+      DEFINITION_FILE: ${{ inputs.DEFINITION_FILE }}
+      DRY_RUN: ${{ inputs.DRY_RUN }}
+      INSTALLATION_KEY: ${{ inputs.INSTALLATION_KEY }}
+      LANGUAGE: ${{ inputs.LANGUAGE }}
+      MARKETPLACE_TOKEN: ${{ secrets.MARKETPLACE_TOKEN }}
+      PACKAGE: ${{ inputs.PACKAGE }}
+      PACKAGE_SRC: ${{ inputs.PACKAGE_SRC }}
+      POST_INSTALL_SCRIPT: ${{ inputs.POST_INSTALL_SCRIPT }}
+      POST_INSTALL_URL: ${{ inputs.POST_INSTALL_URL }}
+      RELEASE_NOTES_URL: ${{ inputs.RELEASE_NOTES_URL }}
+      # REPO: ${{ inputs.REPO }}
+      SKIP_ANCESTOR_CHECK: ${{ inputs.SKIP_ANCESTOR_CHECK }}
+      # SKIP_FONDASH: ${{ inputs.SKIP_FONDASH }}
+      # SKIP_PUBLISH: ${{ inputs.SKIP_PUBLISH }}
+      SKIP_VALIDATION: ${{ inputs.SKIP_VALIDATION }}
+      UNINSTALL_SCRIPT: ${{ inputs.UNINSTALL_SCRIPT }}
+      VERSION_DESCRIPTION: ${{ inputs.VERSION_DESCRIPTION }}
+      VERSION_NAME: ${{ inputs.VERSION_NAME }}
+      VERSION_NUMBER: ${{ inputs.VERSION_NUMBER }}
+      VERSION_TAG: ${{ inputs.VERSION_TAG }}
+      WAIT_TIMEOUT: ${{ inputs.WAIT_TIMEOUT }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ssh-key: ${{ secrets.BUILD_SSH_RSA_KEY }}
+          submodules: ${{ inputs.CHECKOUT_SUBMODULES }}
+
+      - name: Update Build Submodule
+        if: ${{ inputs.CHECKOUT_SUBMODULES }}
+        run: |
+          cd build
+          git checkout master
+          git pull
+
+      # - name: Checkout ops-scripts
+      #   if: ${{ inputs.UPLOAD_PACKAGE }}
+      #   uses: actions/checkout@v3
+      #   with:
+      #     ssh-key: ${{ secrets.BUILD_SSH_RSA_KEY }}
+      #     repository: Fonteva/ops-scripts
+      #     path: ops-scripts
+
+      - name: Checkout ApexMocks
+        if: ${{ inputs.CHECKOUT_APEX_MOCKS }}
+        uses: actions/checkout@v3
+        with:
+          ssh-key: ${{ secrets.BUILD_SSH_RSA_KEY }}
+          repository: Fonteva/ApexMocks
+          ref: ${{ inputs.CHECKOUT_APEX_MOCKS_REF }}
+          path: tmp/${{ inputs.CHECKOUT_APEX_MOCKS_PATH }}
+
+      - name: Convert ApexMocks Files to sfdx Format
+        if: ${{ inputs.CHECKOUT_APEX_MOCKS }}
+        run: |
+          sf force mdapi convert --root-dir "tmp/$CHECKOUT_APEX_MOCKS_PATH" --output-dir "$CHECKOUT_APEX_MOCKS_PATH"
+
+      - name: Checkout Data-Access-Library
+        if: ${{ inputs.CHECKOUT_DAL }}
+        uses: actions/checkout@v3
+        with:
+          ssh-key: ${{ secrets.BUILD_SSH_RSA_KEY }}
+          repository: Fonteva/Data-Access-Library
+          ref: ${{ inputs.CHECKOUT_DAL_REF }}
+          path: tmp/${{ inputs.CHECKOUT_DAL_PATH }}
+
+      - name: Convert Data-Access-Library Files to sfdx Format
+        if: ${{ inputs.CHECKOUT_DAL }}
+        run: |
+          sf force mdapi convert --root-dir "tmp/$CHECKOUT_DAL_PATH" --output-dir "$CHECKOUT_DAL_PATH"
+
+      - name: Authorize Devhub
+        env:
+          DEV_HUB_CLIENT_ID: ${{ secrets.DEVHUB_CLIENTID }}
+          DEV_HUB_USERNAME: ${{ secrets.DEVHUB_USERNAME }}
+          DEVHUB_KEY: "${{ secrets.DEVHUB_KEY }}"
+          DEVHUB_KEY_BASE64: "${{ secrets.DEVHUB_KEY_BASE64 }}"
+          DEVHUB_KEY_FILE: /tmp/devhub.key
+        run: |
+          # /usr/local/bin/devhub.sh
+
+          if [ ! -z "$DEVHUB_KEY" ]; then
+            echo "$DEVHUB_KEY" > $DEVHUB_KEY_FILE
+          elif [ ! -z "$DEVHUB_KEY_BASE64" ]; then
+            echo "$DEVHUB_KEY_BASE64" | base64 -d > $DEVHUB_KEY_FILE
+          else
+            echo "Either DEVHUB_KEY or DEVHUB_KEY_BASE64 must be set"
+            exit 1
+          fi
+
+          sf auth jwt grant \
+            --client-id $DEV_HUB_CLIENT_ID \
+            --username $DEV_HUB_USERNAME \
+            --jwt-key-file $DEVHUB_KEY_FILE \
+            --set-default-dev-hub \
+            --instance-url $PROD_INST_URL
+          rm -f $DEVHUB_KEY_FILE
+
+      # TODO: Implement this:
+      # - name: Create Package Version (cci)
+      #   id: create_package_version_cci
+      #   if: ${{ inputs.CCI_FLOW_NAME }}
+      #   run: |
+      #     if [ -z "$CUMULUSCI_SERVICE_github" ];then
+      #       echo "CUMULUSCI_SERVICE_github input param is required if CCI_FLOW_NAME is set"
+      #       exit -1
+      #     fi
+        
+      #     cciOrgVar="CUMULUSCI_ORG_$ORG_ALIAS"
+      #     echo $cciOrgVar
+      #     printf -v $cciOrgVar '{"username": "'$ORG_USERNAME'", "instance_url": "'$PROD_INST_URL'"}'
+      #     export $cciOrgVar
+      #     echo ${!cciOrgVar}
+      #     echo "** Running 'cci flow run $CCI_FLOW_NAME' ..."
+      #     cci flow run $CCI_FLOW_NAME --org $ORG_ALIAS
+          
+      - name: Create Package Version (sf)
+        id: create_package_version
+        if: ${{ !inputs.CCI_FLOW_NAME }}
+        shell: pwsh
+        run: |
+          if ($env:VERSION_TAG) {
+            $tag = $env:VERSION_TAG
+          } else {
+            git config --global --add safe.directory "${{ github.workspace }}"
+            $tag = (git log -n 1 --pretty='%C(auto)%h' | Out-String).Trim()
+          }
+
+          $createArgs = @(
+            "--json",
+            "--package=${env:PACKAGE}",
+            "--tag=$tag",
+            "--wait=${env:WAIT_TIMEOUT}"
+          )
+
+          $envToArg = @{
+            "API_VERSION" = "api-version";
+            "BRANCH_NAME" = "branch";
+            "DEFINITION_FILE" = "definition-file";
+            "INSTALLATION_KEY" = "installation-key";
+            "LANGUAGE" = "language";
+            "PACKAGE_SRC" = "path";
+            "POST_INSTALL_SCRIPT" = "post-install-script";
+            "POST_INSTALL_URL" = "post-install-url";
+            "RELEASE_NOTES_URL" = "releasenotes-url";
+            "UNINSTALL_SCRIPT" = "uninstall-script";
+            "VERSION_DESCRIPTION" = "version-description";
+            "VERSION_NAME" = "version-name";
+            "VERSION_NUMBER" = "version-number"
+          }
+          
+          foreach ($envName in ($envToArg.Keys | Sort-Object)) {
+            if (Test-Path env:$envName) {
+              $argName = $envToArg[$envName]
+              $argValue = (Get-Content -Raw env:$envName).Trim()
+              
+              if ($argValue) {
+                $createArgs += "--$argName=$argValue"
+              }
+            }
+          }
+          
+          $boolEnvToArg = @{
+            "CODE_COVERAGE" = "code-coverage";
+            "SKIP_ANCESTOR_CHECK" = "skip-ancestor-check";
+            "SKIP_VALIDATION" = "skip-validation";
+            "VERBOSE" = "verbose"
+          }
+          
+          foreach ($envName in ($boolEnvToArg.Keys | Sort-Object)) {
+            if (Test-Path env:$envName) {
+              $argName = $boolEnvToArg[$envName]
+              $argValue = (Get-Content -Raw env:$envName).Trim()
+
+              if ($argValue -eq "true") {
+                $createArgs += "--$argName"
+              }
+            }
+          }
+
+          if (!$env:INSTALLATION_KEY) {
+            $createArgs += "--installation-key-bypass"
+          }
+
+          echo "Running: sf package version create $createArgs"
+
+          if ($env:DRY_RUN -eq "false") {
+            $result = sf package version create @createArgs | Out-String | ConvertFrom-Json
+            echo $result
+
+            if ($result.result.Status -eq "Success") {
+              $versionId = $result.result.SubscriberPackageVersionId
+              echo "Package Version ID       : $versionId"
+              echo "Package Installation URL : https://login.salesforce.com/packaging/installPackage.apexp?p0=$versionId"
+              echo "version_id=$versionId" >> $GITHUB_OUTPUT
+            } else {
+              echo "ERROR: `sf package version create` failed"
+              exit 1
+            }
+          }
+          
+          # TODO: Check in sfdx-project.json file if it was modified.
+      
+      # TODO: Fix this:
+      # - name: Promote Package Version (cci)
+      #   if: ${{ !inputs.DRY_RUN && inputs.PROMOTE_PACKAGE_VERSION && inputs.CCI_FLOW_NAME }}
+      #   run: |
+      #     versionId="${{ steps.create_package_version_cci.outputs.version_id }}"
+      #     sf package version promote --no-prompt --package $versionId
+          
+      - name: Promote Package Version (sf)
+        if: ${{ !inputs.DRY_RUN && inputs.PROMOTE_PACKAGE_VERSION && !inputs.CCI_FLOW_NAME }}
+        run: |
+          versionId="${{ steps.create_package_version.outputs.version_id }}"
+          sf package version promote --no-prompt --package $versionId
+
+      # TODO: Implement this:
+      #- name: Post Package Details
+      #  if: ${{ !inputs.DRY_RUN && inputs.PROMOTE_PACKAGE_VERSION && inputs.POST_PACKAGE_DETAILS }}
+      #  run: |
+      #    if [ -z "$REPO" ];then
+      #      echo "REPO input param is required if POST_PACKAGE_DETAILS is true"
+      #      exit -1
+      #    fi
+      #
+      #    GIT_COMMIT=$(git rev-parse HEAD)
+      #    echo "** Commit = $GIT_COMMIT"
+      #    
+      #    echo "** Getting Jira tickets ..."
+      #    git log --first-parent --oneline --since="24 hours ago" > test.txt
+      #    sed -i -e 's/[[:blank:]]/-/g' test.txt
+      #    jiraticket=`grep -P -o "(?i)PD-[0-9]{1,}" test.txt | tr '\n' ',' | tr [a-z] [A-Z]`
+      #    if [ -z "$jiraticket" ];then
+      #      echo "** No Jira ticket found"
+      #      jiraticket="NoTickets"
+      #    else
+      #      echo "jiraticket = $jiraticket"
+      #    fi;
+      #    
+      #    echo "** Running 'npm install' ..."
+      #    pushd ./ops-scripts/uploads-scripts/github
+      #    npm install
+      #    
+      #    uploadArgs=""
+      #    
+      #    if [ "$SKIP_FONDASH" == "true" ]; then
+      #      uploadArgs="--skip-fondash"
+      #    else
+      #      uploadArgs=""
+      #    fi
+      #    
+      #    if [ "$SKIP_PUBLISH" == "true" ]; then
+      #      uploadArgs="$uploadArgs --skip-publish"
+      #    fi
+      #    
+      #    echo "uploadArgs = $uploadArgs"
+      #    
+      #    echo "** Running 'node upload.js' ..."
+      #    node ./upload.js --package-type=2GP --package-name="$PACKAGE" --versionname=$VERSION_NAME --tickets=$jiraticket --repo=$REPO --commit=$GIT_COMMIT $uploadArgs
+      #    popd
+
+      # TODO: Fix this:
+      # - name: Create Version Tag (cci)
+      #   uses: actions/github-script@v6
+      #   if: ${{ !inputs.DRY_RUN && inputs.PROMOTE_PACKAGE_VERSION && inputs.CREATE_TAG && steps.create_package_version_cci.outputs.version && inputs.CCI_FLOW_NAME }}
+      #   with:
+      #     github-token: ${{ secrets.GITHUB_TOKEN }}
+      #     script: |
+      #       github.rest.git.createRef({
+      #         owner: context.repo.owner,
+      #         repo: context.repo.repo,
+      #         ref: 'refs/tags/v${{ steps.create_package_version_cci.outputs.version }}',
+      #         sha: context.sha
+      #       })
+
+      # TODO: Fix this:
+      # - name: Create Version Tag (sf)
+      #   uses: actions/github-script@v6
+      #   if: ${{ !inputs.DRY_RUN && inputs.PROMOTE_PACKAGE_VERSION && inputs.CREATE_TAG && steps.create_package_version.outputs.version && !inputs.CCI_FLOW_NAME }}
+      #   with:
+      #     github-token: ${{ secrets.GITHUB_TOKEN }}
+      #     script: |
+      #       github.rest.git.createRef({
+      #         owner: context.repo.owner,
+      #         repo: context.repo.repo,
+      #         ref: 'refs/tags/v${{ steps.create_package_version.outputs.version }}',
+      #         sha: context.sha
+      #       })
