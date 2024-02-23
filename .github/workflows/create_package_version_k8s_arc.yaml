@@ -200,6 +200,7 @@ jobs:
       # SKIP_PUBLISH: ${{ inputs.SKIP_PUBLISH }}
       SKIP_VALIDATION: ${{ inputs.SKIP_VALIDATION }}
       UNINSTALL_SCRIPT: ${{ inputs.UNINSTALL_SCRIPT }}
+      VERBOSE: ${{ inputs.VERBOSE }}
       VERSION_DESCRIPTION: ${{ inputs.VERSION_DESCRIPTION }}
       VERSION_NAME: ${{ inputs.VERSION_NAME }}
       VERSION_NUMBER: ${{ inputs.VERSION_NUMBER }}
