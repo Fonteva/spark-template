@@ -402,7 +402,7 @@ jobs:
         if: ${{ !inputs.DRY_RUN && inputs.PROMOTE_PACKAGE_VERSION && !inputs.CCI_FLOW_NAME }}
         run: |
           if [ -f "$VERSION_ID_FILE" ]; then
-            version_id=$(cat $env:VERSION_ID_FILE)
+            version_id=$(cat $VERSION_ID_FILE)
             echo "Version ID: $version_id"
             sf package version promote --no-prompt --package $version_id
           fi
