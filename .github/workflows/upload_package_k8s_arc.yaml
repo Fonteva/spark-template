@@ -216,6 +216,8 @@ jobs:
         if: ${{ inputs.UPLOAD_PACKAGE }}
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
+
           if (!$env:REPO) {
             echo "REPO input param is required if UPLOAD_PACKAGE is true"
             exit -1
