@@ -317,7 +317,7 @@ jobs:
 
           $createArgs = @(
             "--json",
-            "--package=${env:PACKAGE}",
+            "--package='${env:PACKAGE}'",
             "--tag=$tag",
             "--wait=${env:WAIT_TIMEOUT}"
           )
