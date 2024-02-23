@@ -165,13 +165,13 @@ jobs:
             --instance-url $PROD_INST_URL
           rm -f $SFDX_KEY_FILE
 
-      # - name: Authenticate to Packaging Org (Auth URL)
-      #   if: ${{ inputs.AUTH_MODE == 'URL' }}
-      #   run: |
-      #     authFile=/tmp/authFile.json
-      #     echo "$SFDX_PACKAGING_ORG_AUTH_JSON" > $authFile
-      #     sf auth:sfdxurl:store -f $authFile -a $ORG_ALIAS
-      #     rm -f $authFile
+      - name: Authenticate to Packaging Org (Auth URL)
+        if: ${{ inputs.AUTH_MODE == 'URL' }}
+        run: |
+          auth_file=/tmp/sf_auth.json
+          echo "$SFDX_PACKAGING_ORG_AUTH_JSON" > $auth_file
+          sf  auth sfdxurl store  --sfdx-url-file $auth_file --alias $ORG_ALIAS
+          rm -f $auth_file
           
       - name: Deploy Source Files (cci - JWT)
         if: ${{ inputs.AUTH_MODE == 'JWT' && inputs.CCI_FLOW_NAME }}
@@ -186,28 +186,30 @@ jobs:
           echo $cciOrg
           Set-Content `
             -Path env:$cciOrg `
-            -Value ('{"username": "' + $env:ORG_USERNAME + '", "instance_url": "' + $env:PROD_INST_URL + '"}')
+            -Value (ConvertTo-Json @{ `
+              "username" = $env:ORG_USERNAME; `
+              "instance_url" = $env:PROD_INST_URL `
+            })
           Get-Content env:$cciOrg
           cci flow run $env:CCI_FLOW_NAME --org $env:ORG_ALIAS
           
-      # - name: Deploy Source Files (cci - Auth URL)
-      #   if: ${{ inputs.AUTH_MODE == 'URL' && inputs.CCI_FLOW_NAME }}
-      #   run: |
-      #     export PATH="/usr/local/lib/nodejs/bin:$PATH:$SFDX_PATH"
-      #     cci org import $ORG_ALIAS $ORG_ALIAS
-      #     cci flow run $CCI_FLOW_NAME --org $ORG_ALIAS
+      - name: Deploy Source Files (cci - Auth URL)
+        if: ${{ inputs.AUTH_MODE == 'URL' && inputs.CCI_FLOW_NAME }}
+        run: |
+          cci org import $ORG_ALIAS $ORG_ALIAS
+          cci flow run $CCI_FLOW_NAME --org $ORG_ALIAS
           
-      # - name: Deploy Source Files (sf - JWT)
-      #   if: ${{ inputs.AUTH_MODE == 'JWT' && inputs.SF_DEPLOY_CMD }}
-      #   run: |
-      #     echo "** Running 'sf $SF_DEPLOY_CMD' ..."
-      #     sf $SF_DEPLOY_CMD -u $ORG_USERNAME
+      - name: Deploy Source Files (sf - JWT)
+        if: ${{ inputs.AUTH_MODE == 'JWT' && inputs.SF_DEPLOY_CMD }}
+        run: |
+          echo "** Running 'sf $SF_DEPLOY_CMD' ..."
+          sf $SF_DEPLOY_CMD -u $ORG_USERNAME
           
-      # - name: Deploy Source Files (sf - Auth URL)
-      #   if: ${{ inputs.AUTH_MODE == 'URL' && inputs.SF_DEPLOY_CMD }}
-      #   run: |
-      #     echo "** Running 'sf $SF_DEPLOY_CMD' ..."
-      #     sf $SF_DEPLOY_CMD -u $ORG_ALIAS
+      - name: Deploy Source Files (sf - Auth URL)
+        if: ${{ inputs.AUTH_MODE == 'URL' && inputs.SF_DEPLOY_CMD }}
+        run: |
+          echo "** Running 'sf $SF_DEPLOY_CMD' ..."
+          sf $SF_DEPLOY_CMD -u $ORG_ALIAS
                     
       - name: Upload Package
         id: upload_package
@@ -234,30 +236,40 @@ jobs:
           
           echo "** Getting Jira tickets ..."
           
-          $jiraticket = git log --first-parent --oneline --since="24 hours ago" `
-            | sed -i -e 's/[[:blank:]]/-/g' `
-            | grep -P -o "(?i)PD-[0-9]{1,}" `
-            | tr '\n' ',' `
-            | tr [a-z] [A-Z] `
-            | Out-String
+          $ticketRegex = '(?i)(PD-[0-9]+)'
+          $jiraTicket = ( `
+            git log --first-parent --oneline --since="8 weeks ago" `
+              |% { $_ -replace '\s','-' } `
+              | Select-String -Pattern $ticketRegex `
+              |% { [regex]::Match($_, $ticketRegex, 'IgnoreCase').Groups[1].Value.ToUpper() } `
+          ) -join ','
+          # $jiraTicket = git log --first-parent --oneline --since="24 hours ago" `
+          #   |% { $_ -replace '\s','-' } `
+          #   | Select-String -Pattern $ticketRegex `
+          #   | [regex]::
+          #   | tr '\n' ',' `
+          #   | tr [a-z] [A-Z] `
+          #   | Out-String
 
-          if (!$jiraticket) {
+          if (!$jiraTicket) {
             echo "** No Jira ticket found"
-            $jiraticket = "NoTickets"
+            $jiraTicket = "NoTickets"
           } else {
-            echo "jiraticket = $jiraticket"
+            echo "jiraTicket = $jiraTicket"
           }
           
           echo "** Running 'npm install' ..."
           pushd ./ops-scripts/uploads-scripts/github
           npm install
           
+          $versionFile = "/tmp/version.txt"
           $uploadArgs = @(
             './upload.js',
-            "--namespace=$env:ORG_NAMESPACE",
-            "--versionname=$env:VERSION_NAME",
-            "--tickets=$jiraticket",
-            "--repo=$env:REPO",
+            "--namespace=${env:ORG_NAMESPACE}",
+            "--versionname=${env:VERSION_NAME}",
+            "--tickets=$jiraTicket",
+            "--repo=${env:REPO}",
+            "--commit=$commitHash",
             "--commit=$commitHash"
           )
           
@@ -280,16 +292,16 @@ jobs:
           if ($env:IS_PATCH -eq "true") {
             $uploadArgs += @(
               "--ispatch",
-              "--major=$env:VERSION_NUM_MAJOR",
-              "--minor=$env:VERSION_NUM_MINOR"
+              "--major=${env:VERSION_NUM_MAJOR}",
+              "--minor=${env:VERSION_NUM_MINOR}"
             )
           }
           
-          if (!$env:ORG_USERNAME") {
+          if (!$env:ORG_USERNAME) {
             $env:ORG_USERNAME = $env:ORG_ALIAS
           }
 
-          $orgInfo = sfdx force:org:display -u $env:ORG_USERNAME --json `
+          $orgInfo = sf org display --target-org $env:ORG_USERNAME --json `
             | Out-String `
             | ConvertFrom-Json
           $uploadArgs += @(
@@ -300,25 +312,30 @@ jobs:
           echo "uploadArgs = $uploadArgs"
           
           echo "** Running 'node upload.js' ..."
+
+          # TODO: remove `echo` after testing is completed:
           echo node @uploadArgs
           
-          if (Test-Path "version.txt") {
-            $version = (Get-Content -Raw -Path version.txt).Trim()
-            echo "Version is $version"
+          # TODO: remove this after testing is completed:
+          echo "" > $versionFile
+
+          if (Test-Path $versionFile) {
+            $version = (Get-Content -Raw -Path $versionFile).Trim()
+            echo "Version = '$version'"
             echo "version=$version" >> "$GITHUB_OUTPUT"
           }
 
           popd
 
-      # - name: Create Version Tag
-      #   uses: actions/github-script@v6
-      #   if: ${{ inputs.UPLOAD_PACKAGE && inputs.CREATE_TAG && steps.upload_package.outputs.version }}
-      #   with:
-      #     github-token: ${{ secrets.GITHUB_TOKEN }}
-      #     script: |
-      #       github.rest.git.createRef({
-      #         owner: context.repo.owner,
-      #         repo: context.repo.repo,
-      #         ref: 'refs/tags/v${{ steps.upload_package.outputs.version }}',
-      #         sha: context.sha
-      #       })
+      - name: Create Version Tag
+        uses: actions/github-script@v6
+        if: ${{ inputs.UPLOAD_PACKAGE && inputs.CREATE_TAG && steps.upload_package.outputs.version }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: 'refs/tags/v${{ steps.upload_package.outputs.version }}',
+              sha: context.sha
+            })
