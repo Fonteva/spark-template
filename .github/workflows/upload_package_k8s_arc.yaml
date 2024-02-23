@@ -175,6 +175,7 @@ jobs:
           
       - name: Deploy Source Files (cci - JWT)
         if: ${{ inputs.AUTH_MODE == 'JWT' && inputs.CCI_FLOW_NAME }}
+        shell: pwsh
         run: |
           if (!$env:CUMULUSCI_SERVICE_github) {
             echo "CUMULUSCI_SERVICE_github input param is required if CCI_FLOW_NAME is set"
