@@ -253,7 +253,7 @@ jobs:
           }
           
           echo "** Running 'npm install' ..."
-          pushd ./ops-scripts/uploads-scripts/github
+          cd ./ops-scripts/uploads-scripts/github
           npm install
           
           $versionFile = "/tmp/version.txt"
@@ -315,8 +315,6 @@ jobs:
             echo "Version = '$version'"
             echo "version=$version" >> "$GITHUB_OUTPUT"
           }
-
-          popd
 
       - name: Create Version Tag
         uses: actions/github-script@v6
