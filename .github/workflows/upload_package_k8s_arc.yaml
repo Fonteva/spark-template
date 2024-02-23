@@ -258,12 +258,10 @@ jobs:
           
           $versionFile = "/tmp/version.txt"
           $uploadArgs = @(
-            './upload.js',
             "--namespace=${env:ORG_NAMESPACE}",
             "--versionname=${env:VERSION_NAME}",
             "--tickets=$jiraTicket",
             "--repo=${env:REPO}",
-            "--commit=$commitHash",
             "--commit=$commitHash"
           )
           
@@ -303,15 +301,13 @@ jobs:
             "--instanceurl=$($orgInfo.result.instanceUrl)"
           )
           
-          echo "uploadArgs = $uploadArgs"
-          
-          echo "** Running node $uploadArgs"
+          echo "** Running node ./upload.js $uploadArgs"
 
           # TODO: remove `echo` after testing is completed:
-          # node @uploadArgs
+          # node ./upload.js @uploadArgs
           
           # TODO: remove this after testing is completed:
-          $versionFile = "version.txt"
+          $versionFile = "./version.txt"
           echo "4.2" > $versionFile
 
           if (Test-Path $versionFile) {
