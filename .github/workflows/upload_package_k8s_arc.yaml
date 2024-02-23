@@ -236,7 +236,7 @@ jobs:
           
           echo "** Getting Jira tickets ..."
           
-          git config --global --add safe.directory "${{ github.workspace }}"
+          git config --global --add safe.directory $env:GITHUB_WORKSPACE
           $ticketRegex = '(?i)(PD-[0-9]+)'
           $jiraTicket = ( `
             git log --first-parent --oneline --since="8 weeks ago" `
