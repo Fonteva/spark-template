@@ -317,7 +317,7 @@ jobs:
 
           $createArgs = @(
             "--json",
-            "--package='${env:PACKAGE}'",
+            # "--package='${env:PACKAGE}'",
             "--tag=$tag",
             "--wait=${env:WAIT_TIMEOUT}"
           )
@@ -374,7 +374,7 @@ jobs:
           echo "Running: sf package version create $createArgs"
 
           if ($env:DRY_RUN -eq "false") {
-            $result = sf package version create @createArgs | Out-String | ConvertFrom-Json
+            $result = sf package version create "--package=${env:PACKAGE}" @createArgs | Out-String | ConvertFrom-Json
             echo $result
 
             if ($result.result.Status -eq "Success") {
