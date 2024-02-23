@@ -315,8 +315,10 @@ jobs:
           if (Test-Path $versionFile) {
             $version = (Get-Content -Raw -Path $versionFile).Trim()
             echo "Version = '$version'"
-            # echo "version=$version" >> "$GITHUB_OUTPUT"
+            echo "version=$version" >> "$GITHUB_OUTPUT"
           }
+
+          echo "Done"
 
       - name: Create Version Tag
         uses: actions/github-script@v6
