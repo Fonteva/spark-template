@@ -144,72 +144,72 @@ jobs:
           repository: Fonteva/ops-scripts
           path: ops-scripts
 
-      - name: Authenticate to Packaging Org (JWT)
-        if: ${{ inputs.AUTH_MODE == 'JWT' }}
-        run: |
-          if [ -z "$ORG_USERNAME" ];then
-            echo "ORG_USERNAME input param is required if inputs.AUTH_MODE == 'JWT'"
-            exit -1
-          fi
+      # - name: Authenticate to Packaging Org (JWT)
+      #   if: ${{ inputs.AUTH_MODE == 'JWT' }}
+      #   run: |
+      #     if [ -z "$ORG_USERNAME" ];then
+      #       echo "ORG_USERNAME input param is required if inputs.AUTH_MODE == 'JWT'"
+      #       exit -1
+      #     fi
 
-          if [ -z "$SFDX_HUB_KEY" ];then
-            echo "SFDX_HUB_KEY input param is required if inputs.AUTH_MODE == 'JWT'"
-            exit -1
-          fi
+      #     if [ -z "$SFDX_HUB_KEY" ];then
+      #       echo "SFDX_HUB_KEY input param is required if inputs.AUTH_MODE == 'JWT'"
+      #       exit -1
+      #     fi
 
-          echo "$SFDX_HUB_KEY" > $SFDX_KEY_FILE
-          sf auth jwt grant \
-            --client-id $SFDX_CLIENT_ID \
-            --username $ORG_USERNAME \
-            --jwt-key-file $SFDX_KEY_FILE \
-            --instance-url $PROD_INST_URL
-          rm -f $SFDX_KEY_FILE
+      #     echo "$SFDX_HUB_KEY" > $SFDX_KEY_FILE
+      #     sf auth jwt grant \
+      #       --client-id $SFDX_CLIENT_ID \
+      #       --username $ORG_USERNAME \
+      #       --jwt-key-file $SFDX_KEY_FILE \
+      #       --instance-url $PROD_INST_URL
+      #     rm -f $SFDX_KEY_FILE
 
-      - name: Authenticate to Packaging Org (Auth URL)
-        if: ${{ inputs.AUTH_MODE == 'URL' }}
-        run: |
-          auth_file=/tmp/sf_auth.json
-          echo "$SFDX_PACKAGING_ORG_AUTH_JSON" > $auth_file
-          sf  auth sfdxurl store  --sfdx-url-file $auth_file --alias $ORG_ALIAS
-          rm -f $auth_file
+      # - name: Authenticate to Packaging Org (Auth URL)
+      #   if: ${{ inputs.AUTH_MODE == 'URL' }}
+      #   run: |
+      #     auth_file=/tmp/sf_auth.json
+      #     echo "$SFDX_PACKAGING_ORG_AUTH_JSON" > $auth_file
+      #     sf  auth sfdxurl store  --sfdx-url-file $auth_file --alias $ORG_ALIAS
+      #     rm -f $auth_file
           
-      - name: Deploy Source Files (cci - JWT)
-        if: ${{ inputs.AUTH_MODE == 'JWT' && inputs.CCI_FLOW_NAME }}
-        shell: pwsh
-        run: |
-          if (!$env:CUMULUSCI_SERVICE_github) {
-            echo "CUMULUSCI_SERVICE_github input param is required if CCI_FLOW_NAME is set"
-            exit -1
-          }
+      # - name: Deploy Source Files (cci - JWT)
+      #   if: ${{ inputs.AUTH_MODE == 'JWT' && inputs.CCI_FLOW_NAME }}
+      #   shell: pwsh
+      #   run: |
+      #     if (!$env:CUMULUSCI_SERVICE_github) {
+      #       echo "CUMULUSCI_SERVICE_github input param is required if CCI_FLOW_NAME is set"
+      #       exit -1
+      #     }
 
-          $cciOrg = "CUMULUSCI_ORG_${env:ORG_ALIAS}"
-          echo $cciOrg
-          Set-Content `
-            -Path env:$cciOrg `
-            -Value (ConvertTo-Json @{ `
-              "username" = $env:ORG_USERNAME; `
-              "instance_url" = $env:PROD_INST_URL `
-            })
-          Get-Content env:$cciOrg
-          cci flow run $env:CCI_FLOW_NAME --org $env:ORG_ALIAS
+      #     $cciOrg = "CUMULUSCI_ORG_${env:ORG_ALIAS}"
+      #     echo $cciOrg
+      #     Set-Content `
+      #       -Path env:$cciOrg `
+      #       -Value (ConvertTo-Json @{ `
+      #         "username" = $env:ORG_USERNAME; `
+      #         "instance_url" = $env:PROD_INST_URL `
+      #       })
+      #     Get-Content env:$cciOrg
+      #     cci flow run $env:CCI_FLOW_NAME --org $env:ORG_ALIAS
           
-      - name: Deploy Source Files (cci - Auth URL)
-        if: ${{ inputs.AUTH_MODE == 'URL' && inputs.CCI_FLOW_NAME }}
-        run: |
-          cci org import $ORG_ALIAS $ORG_ALIAS
-          cci flow run $CCI_FLOW_NAME --org $ORG_ALIAS
+      # - name: Deploy Source Files (cci - Auth URL)
+      #   if: ${{ inputs.AUTH_MODE == 'URL' && inputs.CCI_FLOW_NAME }}
+      #   run: |
+      #     cci org import $ORG_ALIAS $ORG_ALIAS
+      #     cci flow run $CCI_FLOW_NAME --org $ORG_ALIAS
           
-      - name: Deploy Source Files (sf - JWT)
-        if: ${{ inputs.AUTH_MODE == 'JWT' && inputs.SF_DEPLOY_CMD }}
-        run: |
-          echo "** Running 'sf $SF_DEPLOY_CMD' ..."
-          sf $SF_DEPLOY_CMD -u $ORG_USERNAME
+      # - name: Deploy Source Files (sf - JWT)
+      #   if: ${{ inputs.AUTH_MODE == 'JWT' && inputs.SF_DEPLOY_CMD }}
+      #   run: |
+      #     echo "** Running 'sf $SF_DEPLOY_CMD' ..."
+      #     sf $SF_DEPLOY_CMD -u $ORG_USERNAME
           
-      - name: Deploy Source Files (sf - Auth URL)
-        if: ${{ inputs.AUTH_MODE == 'URL' && inputs.SF_DEPLOY_CMD }}
-        run: |
-          echo "** Running 'sf $SF_DEPLOY_CMD' ..."
-          sf $SF_DEPLOY_CMD -u $ORG_ALIAS
+      # - name: Deploy Source Files (sf - Auth URL)
+      #   if: ${{ inputs.AUTH_MODE == 'URL' && inputs.SF_DEPLOY_CMD }}
+      #   run: |
+      #     echo "** Running 'sf $SF_DEPLOY_CMD' ..."
+      #     sf $SF_DEPLOY_CMD -u $ORG_ALIAS
                     
       - name: Upload Package
         id: upload_package
