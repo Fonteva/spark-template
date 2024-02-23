@@ -305,13 +305,14 @@ jobs:
           
           echo "uploadArgs = $uploadArgs"
           
-          echo "** Running 'node upload.js' ..."
+          echo "** Running node $uploadArgs"
 
           # TODO: remove `echo` after testing is completed:
-          echo node @uploadArgs
+          # node @uploadArgs
           
           # TODO: remove this after testing is completed:
-          echo "" > $versionFile
+          $versionFile = "version.txt"
+          echo "4.2" > $versionFile
 
           if (Test-Path $versionFile) {
             $version = (Get-Content -Raw -Path $versionFile).Trim()
